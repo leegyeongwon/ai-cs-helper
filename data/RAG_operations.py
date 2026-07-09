@@ -16,6 +16,8 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+from regulations import REGULATIONS
+
 
 def env(name: str) -> str:
     value = os.getenv(name, "").strip()
@@ -163,18 +165,70 @@ def search_documents() -> None:
         print("검색할 문서가 없습니다.")
 
 
+def build_regulation_rows() -> list[dict[str, Any]]:
+    rows = []
+    for regulation_id, text in REGULATIONS.items():
+        text = text.strip()
+        if not text:
+            continue
+        print(f"  - 제{regulation_id}조 임베딩 중...")
+        rows.append(
+            {
+                "content": text,
+                "metadata": {"source": "regulation", "regulation_id": regulation_id},
+                "embedding": vector_literal(embed(text, "passage")),
+            }
+        )
+    return rows
+
+
+def delete_all_documents() -> None:
+    # PostgREST는 필터 없는 DELETE를 막기 때문에, PK인 id가 null이 아니라는
+    # 항상 true인 조건을 필터로 줘서 테이블 전체를 지운다.
+    request = urllib.request.Request(
+        supabase_url(documents_table(), {"id": "not.is.null"}),
+        headers=supabase_headers({"Prefer": "return=minimal"}),
+        method="DELETE",
+    )
+    read_json(request)
+
+
+def add_regulations() -> None:
+    print(f"총 {len(REGULATIONS)}개의 규정을 임베딩합니다.")
+    rows = build_regulation_rows()
+
+    print("기존에 저장된 문서를 전부 삭제합니다...")
+    delete_all_documents()
+
+    print("새로 임베딩한 규정 문서를 저장합니다...")
+    post_json(
+        supabase_url(documents_table()),
+        supabase_headers({"Prefer": "return=minimal"}),
+        rows,
+    )
+    print(f"저장 완료: {len(rows)}건")
+
+
 def main() -> int:
     load_dotenv()
 
     parser = argparse.ArgumentParser(description="Console embedding demo")
-    parser.add_argument("command", choices=["add", "search"], help="add or search")
+    parser.add_argument(
+        "command",
+        nargs="?",
+        default="regulations",
+        choices=["add", "search", "regulations"],
+        help="add / search / regulations (기본값: regulations)",
+    )
     args = parser.parse_args()
 
     try:
         if args.command == "add":
             add_document()
-        else:
+        elif args.command == "search":
             search_documents()
+        else:
+            add_regulations()
     except RuntimeError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
