@@ -8,11 +8,8 @@ from regulations import REGULATIONS
 
 load_dotenv()
 
-#SUPABASE_URL = os.environ.get("SUPABASE_URL")
-#SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-
-SUPABASE_URL = "https://nqbmofvnaxtmbmqipzhr.supabase.co/"
-SUPABASE_KEY = "sb_publishable_3bBcDfIeqwxeUEER_aKtTA_5bydiDMV"
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("SUPABASE_URL 또는 SUPABASE_KEY가 설정되지 않았습니다. .env 파일을 확인하세요.")
