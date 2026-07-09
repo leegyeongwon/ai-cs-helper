@@ -1,3 +1,9 @@
+"""
+임베딩 검증용 데모
+
+supabase에 문서를 저장하고, 검색어를 입력하면 유사도가 높은 문서를 찾아서 출력한다.
+"""
+
 import argparse
 import json
 import math
