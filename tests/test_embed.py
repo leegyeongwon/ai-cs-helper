@@ -1,0 +1,96 @@
+import json
+
+import pytest
+
+from app.clients import embedding, http, supabase
+from app.rag import search
+
+
+def test_vector_literal_formats_pgvector_value():
+    assert supabase.vector_literal([1.0, 2.5, -3.0]) == "[1.0,2.5,-3.0]"
+
+
+def test_parse_embedding_accepts_json_string():
+    assert supabase.parse_embedding("[1, 2.5, -3]") == [1.0, 2.5, -3.0]
+
+
+def test_parse_embedding_accepts_list():
+    assert supabase.parse_embedding([1, "2.5", -3]) == [1.0, 2.5, -3.0]
+
+
+def test_cosine_similarity_returns_one_for_same_direction():
+    result = search.cosine_similarity([1, 2, 3], [1, 2, 3])
+    assert result == pytest.approx(1.0)
+
+
+def test_cosine_similarity_returns_zero_for_zero_vector():
+    assert search.cosine_similarity([0, 0], [1, 2]) == 0.0
+
+
+def test_documents_table_uses_default_when_env_missing(monkeypatch):
+    monkeypatch.delenv("SUPABASE_DOCUMENTS_TABLE", raising=False)
+    assert supabase.documents_table() == "documents"
+
+
+def test_documents_table_uses_env_value(monkeypatch):
+    monkeypatch.setenv("SUPABASE_DOCUMENTS_TABLE", "custom_documents")
+    assert supabase.documents_table() == "custom_documents"
+
+
+def test_supabase_headers_includes_auth(monkeypatch):
+    monkeypatch.setenv("SUPABASE_KEY", "secret-key")
+    headers = supabase.supabase_headers()
+    assert headers["apikey"] == "secret-key"
+    assert headers["Authorization"] == "Bearer secret-key"
+
+
+def test_supabase_url_builds_query_string(monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    url = supabase.supabase_url("documents", {"select": "id,content"})
+    assert url == "https://example.supabase.co/rest/v1/documents?select=id%2Ccontent"
+
+
+def test_env_raises_when_value_missing(monkeypatch):
+    monkeypatch.delenv("MISSING_TEST_ENV", raising=False)
+
+    with pytest.raises(RuntimeError, match="Missing environment variable"):
+        http.env("MISSING_TEST_ENV")
+
+
+def test_post_json_sends_json_payload(monkeypatch):
+    captured = {}
+
+    def fake_read_json(request):
+        captured["method"] = request.get_method()
+        captured["headers"] = dict(request.header_items())
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return {"ok": True}
+
+    monkeypatch.setattr(http, "read_json", fake_read_json)
+
+    response = http.post_json(
+        "https://example.com",
+        {"Content-Type": "application/json"},
+        {"hello": "world"},
+    )
+
+    assert response == {"ok": True}
+    assert captured["method"] == "POST"
+    assert captured["body"] == {"hello": "world"}
+
+
+def test_embed_returns_embedding_from_api_response(monkeypatch):
+    def fake_embedding_config(kind):
+        assert kind == "query"
+        return "https://api.example.com/v1", "test-key", "embedding-query"
+
+    def fake_post_json(url, headers, payload):
+        assert url == "https://api.example.com/v1/embeddings"
+        assert headers["Authorization"] == "Bearer test-key"
+        assert payload == {"model": "embedding-query", "input": "hello"}
+        return {"data": [{"embedding": [0.1, 0.2, 0.3]}]}
+
+    monkeypatch.setattr(embedding, "embedding_config", fake_embedding_config)
+    monkeypatch.setattr(embedding, "post_json", fake_post_json)
+
+    assert embedding.embed("hello", "query") == [0.1, 0.2, 0.3]

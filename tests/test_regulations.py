@@ -1,4 +1,4 @@
-from regulations import REGULATIONS
+from app.rag.regulations import REGULATIONS
 
 
 def test_regulations_is_not_empty():
