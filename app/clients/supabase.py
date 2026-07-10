@@ -79,7 +79,7 @@ def _serialize_inquiry_state(state: dict) -> dict:
         "ai_answer": state["ai_answer"],
         "final_answer": state["final_answer"],
         "status": state["status"],
-        "reviewed_by": state["reviewer_type"],
+        "reviewer_type": state["reviewer_type"],
     }
     return {k: v for k, v in values.items() if v is not None}
 
@@ -108,3 +108,54 @@ def update_inquiry(state: dict) -> None:
         method="PATCH",
     )
     read_json(request)
+
+
+# ---------------------------------------------------------------------------
+# 관리자 페이지에서 쓰는 조회/수정 함수
+# ---------------------------------------------------------------------------
+
+def list_inquiries() -> list[dict[str, Any]]:
+    """전체 문의를 최신순으로 가져온다."""
+    request = urllib.request.Request(
+        supabase_url(inquiries_table(), {"select": "*", "order": "created_at.desc"}),
+        headers=supabase_headers(),
+        method="GET",
+    )
+    return read_json(request) or []
+
+
+def get_inquiry(inquiry_id: str) -> dict[str, Any] | None:
+    """단일 문의를 조회한다. 없으면 None."""
+    request = urllib.request.Request(
+        supabase_url(inquiries_table(), {"inquiry_id": f"eq.{inquiry_id}", "select": "*"}),
+        headers=supabase_headers(),
+        method="GET",
+    )
+    rows = read_json(request) or []
+    return rows[0] if rows else None
+
+
+def update_final_answer(
+    inquiry_id: str,
+    final_answer: str,
+    reviewer_type: str = "human",
+    status: str = "답변 완료",
+) -> dict[str, Any] | None:
+    """관리자가 검토, 작성한 최종 답변을 저장한다.
+
+    final_answer와 함께 답변자를 human으로, 상태를 완료로 갱신한다.
+    갱신된 행을 반환한다(없으면 None).
+    """
+    values = {
+        "final_answer": final_answer,
+        "reviewer_type": reviewer_type,
+        "status": status,
+    }
+    request = urllib.request.Request(
+        supabase_url(inquiries_table(), {"inquiry_id": f"eq.{inquiry_id}"}),
+        data=json.dumps(values, ensure_ascii=False).encode("utf-8"),
+        headers=supabase_headers({"Prefer": "return=representation"}),
+        method="PATCH",
+    )
+    rows = read_json(request) or []
+    return rows[0] if rows else None
