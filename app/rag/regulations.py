@@ -1,4 +1,3 @@
-# regulations.py
 # 규정이 추가되면 이 딕셔너리에 그냥 이어서 추가하면 됩니다.
 
 REGULATIONS = {
