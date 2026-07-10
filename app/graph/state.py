@@ -13,7 +13,7 @@ class InquiryState(TypedDict):
     answer_review: Literal["pass", "fail"] | None
 
     # fail 사유. LLM 프롬프트에 추가해서 좋은 결과를 뽑기 위함
-    review_feedback: str | None   
+    review_feedback: str | None
 
     retry_count: int  # 초기값 0
 
@@ -68,7 +68,7 @@ def create_initial_state(
         status="문의 접수",
         reviewer_type=None,
         answer_review=None,
-        review_feedback=None,   # fail 사유 (재생성 시 참고)
+        review_feedback=None,  # fail 사유 (재생성 시 참고)
         retry_count=0,
         session_id=session_id,
         inquiry_id=inquiry_id,

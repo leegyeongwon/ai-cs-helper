@@ -39,7 +39,6 @@ def save_to_db_node(state: InquiryState) -> dict:
     return {}
 
 
-
 def rag_search_node(state: InquiryState) -> dict:
     """문의 원문으로 규정 문서를 검색해 retrieved_docs를 채운다."""
     query_text = _last_user_text(state)
@@ -49,6 +48,7 @@ def rag_search_node(state: InquiryState) -> dict:
         for score, doc in results
     ]
     return {"retrieved_docs": docs}
+
 
 def router_node(state: InquiryState) -> dict:
     """
@@ -85,16 +85,16 @@ def router_node(state: InquiryState) -> dict:
 {docs_text}
 
 [이전 답변]
-{state['ai_answer']}
+{state["ai_answer"]}
 
 [이전 답변이 반려된 사유]
-{state['review_feedback']}
+{state["review_feedback"]}
 
 위 반려 사유를 반영해서 답변을 다시 작성하세요.
 아래 JSON 형식으로만 답하세요. 다른 텍스트는 포함하지 마세요.
 {{
   "intent": "AI_generate",
-  "categories": "{state['categories']}",
+  "categories": "{state["categories"]}",
   "ai_answer": "재작성한 답변"
 }}"""
 
@@ -109,8 +109,6 @@ def router_node(state: InquiryState) -> dict:
     }
 
 
-
-
 def review_node(state: InquiryState) -> dict:
     """ROUTER: 평가 및 재시도. ai_answer의 타당성을 검증한다."""
     query_text = _last_user_text(state)
@@ -121,7 +119,7 @@ def review_node(state: InquiryState) -> dict:
 {query_text}
 
 [AI가 생성한 답변]
-{state['ai_answer']}
+{state["ai_answer"]}
 
 아래 JSON 형식으로만 답하세요. 다른 텍스트는 포함하지 마세요.
 {{
@@ -141,6 +139,3 @@ def review_node(state: InquiryState) -> dict:
         updates["retry_count"] = state["retry_count"] + 1
 
     return updates
-
-
-
