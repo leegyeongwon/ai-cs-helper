@@ -14,7 +14,7 @@ def test_create_initial_state_defaults():
     assert state["ai_answer"] is None
     assert state["final_answer"] is None
     assert state["status"] == "문의 접수"
-    assert state["reviewed_by"] is None
+    assert state["reviewer_type"] is None
 
 
 def test_create_initial_state_with_optional_fields():

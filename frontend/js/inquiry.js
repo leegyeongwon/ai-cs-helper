@@ -26,12 +26,15 @@
     var original = btn.textContent;
     btn.textContent = "등록 중...";
 
+    log("문의 등록 시도");
     postInquiry(value)
       .then(function () {
         textarea.value = "";
+        log("문의 등록 성공");
         showToast("문의가 등록되었습니다.");
       })
       .catch(function (err) {
+        logError("문의 등록 실패:", err.message);
         showToast("등록에 실패했습니다. 서버 상태를 확인해주세요. (" + err.message + ")", true);
       })
       .then(function () {

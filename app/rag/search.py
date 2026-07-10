@@ -4,11 +4,14 @@ RAG 검색 로직.
 질문 문자열을 임베딩한 뒤, Supabase에 저장된 문서와 코사인 유사도로 비교해 상위 문서를 반환한다.
 """
 
+import logging
 import math
 from typing import Any
 
 from app.clients.embedding import embed
 from app.clients.supabase import fetch_documents, parse_embedding
+
+logger = logging.getLogger(__name__)
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -35,4 +38,9 @@ def search(query_text: str, top_k: int = 3) -> list[tuple[float, dict[str, Any]]
         if doc.get("embedding") is not None
     ]
     scored.sort(key=lambda item: item[0], reverse=True)
-    return scored[:top_k]
+    top = scored[:top_k]
+    logger.info(
+        "RAG 검색: 질의=%r 전체문서=%d 상위%d 최고점수=%.4f",
+        query_text[:80], len(docs), len(top), top[0][0] if top else 0.0,
+    )
+    return top

@@ -2,8 +2,12 @@
 LangGraph 조건부 엣지(conditional edge) 라우팅 함수 모음.
 """
 
+import logging
+
 from app.graph.nodes import MAX_RETRY
 from app.graph.state import InquiryState
+
+logger = logging.getLogger(__name__)
 
 
 def route_after_router(state: InquiryState) -> str:
@@ -13,7 +17,9 @@ def route_after_router(state: InquiryState) -> str:
     불가능(to_human) -> 바로 DB 저장으로.
     """
     if state["intent"] == "AI_generate":
+        logger.info("route_after_router: AI_generate -> review")
         return "review"
+    logger.info("route_after_router: to_human -> save_to_db (AI 답변 없이 상담원 이관)")
     return "save_to_db"
 
 
@@ -24,7 +30,12 @@ def route_after_review(state: InquiryState) -> str:
     실패(재시도 여력 있음) -> 다시 router 노드로 (답변 재생성).
     """
     if state["answer_review"] == "pass":
+        logger.info("route_after_review: pass -> save_to_db")
         return "save_to_db"
     if state["retry_count"] >= MAX_RETRY:
+        logger.warning(
+            "route_after_review: 최대 재시도(%d) 도달 -> 검수 미통과본으로 강제 저장", MAX_RETRY
+        )
         return "save_to_db"
+    logger.info("route_after_review: fail -> router (재생성, retry_count=%d)", state["retry_count"])
     return "router"

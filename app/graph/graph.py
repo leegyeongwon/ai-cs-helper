@@ -1,8 +1,12 @@
+import logging
+
 from langgraph.graph import END, START, StateGraph
 
 from app.graph.edges import route_after_review, route_after_router
 from app.graph.nodes import rag_search_node, review_node, router_node, save_to_db_node
 from app.graph.state import InquiryState
+
+logger = logging.getLogger(__name__)
 
 
 def build_graph():
@@ -35,3 +39,4 @@ def build_graph():
 
 
 graph = build_graph()
+logger.info("LangGraph 컴파일 완료")
