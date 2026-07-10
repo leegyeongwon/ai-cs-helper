@@ -58,3 +58,53 @@ def fetch_documents() -> list[dict[str, Any]]:
         method="GET",
     )
     return read_json(request) or []
+
+
+def inquiries_table() -> str:
+    """문의 테이블 이름을 반환한다."""
+    return os.getenv("SUPABASE_INQUIRIES_TABLE", "inquiries").strip() or "inquiries"
+
+
+def _serialize_inquiry_state(state: dict) -> dict:
+    """InquiryState에서 DB 컬럼에 맞는 값만 뽑아 dict로 만든다.
+
+    session_id, intent, answer_review, review_feedback, retry_count는
+    그래프 실행 중에만 쓰는 값이라 DB에 저장하지 않는다.
+    """
+    question = state["messages"][0].content if state["messages"] else None
+    values = {
+        "question": question,
+        "retrieved_docs": state["retrieved_docs"],
+        "categories": state["categories"],
+        "ai_answer": state["ai_answer"],
+        "final_answer": state["final_answer"],
+        "status": state["status"],
+        "reviewed_by": state["reviewer_type"],
+    }
+    return {k: v for k, v in values.items() if v is not None}
+
+
+def insert_inquiry(state: dict) -> str:
+    """최초 저장. INSERT 하고 DB가 생성한 inquiry_id를 반환한다."""
+    values = _serialize_inquiry_state(state)
+    request = urllib.request.Request(
+        supabase_url(inquiries_table()),
+        data=json.dumps(values, ensure_ascii=False).encode("utf-8"),
+        headers=supabase_headers({"Prefer": "return=representation"}),
+        method="POST",
+    )
+    result = read_json(request)
+    return result[0]["inquiry_id"]
+
+
+# 시스템이 하는 업데이트는 여기서 끝. 직원용 웹에서 수정/승인 해서 버튼 누르면 DB가 진짜 마지막으로 수정되고 문의 처리가 끝남.
+def update_inquiry(state: dict) -> None:
+    """마지막 저장. inquiry_id를 기준으로 UPDATE. 이 업데이트를 끝으로 그래프는 종료됨"""
+    values = _serialize_inquiry_state(state)
+    request = urllib.request.Request(
+        supabase_url(inquiries_table(), {"inquiry_id": f"eq.{state['inquiry_id']}"}),
+        data=json.dumps(values, ensure_ascii=False).encode("utf-8"),
+        headers=supabase_headers({"Prefer": "return=minimal"}),
+        method="PATCH",
+    )
+    read_json(request)
