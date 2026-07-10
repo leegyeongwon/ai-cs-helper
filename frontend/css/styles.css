@@ -168,6 +168,21 @@ textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); 
   display: none;
 }
 .toast.show { display: block; }
+.toast.error { background: rgba(208, 59, 59, 0.12); color: #d03b3b; }
+
+/* 오프라인(데모 데이터) 배너 */
+.offline-banner {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(250, 178, 25, 0.15);
+  color: #8a6d1a;
+  font-size: 13px;
+  font-weight: 600;
+}
+@media (prefers-color-scheme: dark) {
+  .offline-banner { color: #fab219; }
+}
 
 /* ===== 탭 ===== */
 .tabs {

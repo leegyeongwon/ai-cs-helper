@@ -5,7 +5,6 @@ LangGraph 노드 함수 모음.
 import json
 
 from app.clients import llm
-from app.clients.supabase import save_inquiry_state
 from app.graph.state import InquiryState
 from app.rag.search import search
 from app.clients.supabase import insert_inquiry, update_inquiry
