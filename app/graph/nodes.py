@@ -3,11 +3,14 @@ LangGraph 노드 함수 모음.
 """
 
 import json
+import logging
 
 from app.clients import llm
 from app.graph.state import InquiryState
 from app.rag.search import search
 from app.clients.supabase import insert_inquiry, update_inquiry
+
+logger = logging.getLogger(__name__)
 
 
 MAX_RETRY = 3
@@ -27,15 +30,22 @@ def _parse_llm_json(raw: str) -> dict:
         text = text.strip("`")
         if text.startswith("json"):
             text = text[4:]
-    return json.loads(text.strip())
+    try:
+        return json.loads(text.strip())
+    except json.JSONDecodeError:
+        # LLM이 JSON이 아닌 응답을 준 경우 — 답변 생성 실패의 주요 원인. 원문을 남긴다.
+        logger.error("LLM JSON 파싱 실패. 원문: %r", raw)
+        raise
 
 
 def save_to_db_node(state: InquiryState) -> dict:
     """inquiry_id 유무로 최초 저장(INSERT)/이후 저장(UPDATE)을 분기한다."""
     if state["inquiry_id"] is None:
         new_id = insert_inquiry(state)
+        logger.info("save_to_db: INSERT 완료 inquiry_id=%s", new_id)
         return {"inquiry_id": new_id}
     update_inquiry(state)
+    logger.info("save_to_db: UPDATE 완료 inquiry_id=%s status=%s", state["inquiry_id"], state["status"])
     return {}
 
 
@@ -47,6 +57,7 @@ def rag_search_node(state: InquiryState) -> dict:
         {"content": doc["content"], "metadata": doc.get("metadata", {}), "score": score}
         for score, doc in results
     ]
+    logger.info("rag_search: 문의=%r 검색결과=%d건", query_text[:80], len(docs))
     return {"retrieved_docs": docs}
 
 
@@ -98,13 +109,26 @@ def router_node(state: InquiryState) -> dict:
   "ai_answer": "재작성한 답변"
 }}"""
 
+    mode = "최초" if state["intent"] is None else f"재시도(retry_count={state['retry_count']})"
+    logger.info("router: %s 호출", mode)
     raw = llm.ask(prompt)
+    logger.debug("router: LLM 원문=%r", raw)
     parsed = _parse_llm_json(raw)
 
+    intent = parsed["intent"]
+    ai_answer = parsed.get("ai_answer")
+    logger.info(
+        "router: intent=%s categories=%s ai_answer=%s",
+        intent, parsed.get("categories"),
+        "생성됨(%d자)" % len(ai_answer) if ai_answer else "없음(null)",
+    )
+    if intent == "AI_generate" and not ai_answer:
+        logger.warning("router: intent=AI_generate 인데 ai_answer가 비어 있음 — 답변 미생성 위험")
+
     return {
-        "intent": parsed["intent"],
+        "intent": intent,
         "categories": parsed.get("categories"),
-        "ai_answer": parsed.get("ai_answer"),
+        "ai_answer": ai_answer,
         "status": "답변 생성",
     }
 
@@ -128,6 +152,7 @@ def review_node(state: InquiryState) -> dict:
 }}"""
 
     raw = llm.ask(prompt)
+    logger.debug("review: LLM 원문=%r", raw)
     parsed = _parse_llm_json(raw)
 
     review_result = parsed["answer_review"]
@@ -137,5 +162,12 @@ def review_node(state: InquiryState) -> dict:
     }
     if review_result == "fail":
         updates["retry_count"] = state["retry_count"] + 1
+        logger.info(
+            "review: FAIL (retry_count %d -> %d, MAX=%d) 사유=%r",
+            state["retry_count"], updates["retry_count"], MAX_RETRY,
+            parsed.get("review_feedback"),
+        )
+    else:
+        logger.info("review: PASS")
 
     return updates

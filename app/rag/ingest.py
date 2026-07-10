@@ -4,6 +4,7 @@ app/rag/regulations.py의 REGULATIONS를 임베딩해서 저장한다.
 실행: python -m app.rag.ingest
 """
 
+import logging
 import sys
 import urllib.request
 from typing import Any
@@ -18,7 +19,10 @@ from app.clients.supabase import (
     supabase_url,
     vector_literal,
 )
+from app.logging_config import setup_logging
 from app.rag.regulations import REGULATIONS
+
+logger = logging.getLogger(__name__)
 
 
 def build_regulation_rows() -> list[dict[str, Any]]:
@@ -28,7 +32,7 @@ def build_regulation_rows() -> list[dict[str, Any]]:
         text = text.strip()
         if not text:
             continue
-        print(f"  - 제{regulation_id}조 임베딩 중...")
+        logger.info("제%s조 임베딩 중...", regulation_id)
         rows.append(
             {
                 "content": text,
@@ -51,27 +55,28 @@ def delete_all_documents() -> None:
 
 def add_regulations() -> None:
     """기존 문서를 지우고 규정 전체를 새로 임베딩해 적재한다."""
-    print(f"총 {len(REGULATIONS)}개의 규정을 임베딩합니다.")
+    logger.info("총 %d개의 규정을 임베딩합니다.", len(REGULATIONS))
     rows = build_regulation_rows()
 
-    print("기존에 저장된 문서를 전부 삭제합니다...")
+    logger.info("기존에 저장된 문서를 전부 삭제합니다...")
     delete_all_documents()
 
-    print("새로 임베딩한 규정 문서를 저장합니다...")
+    logger.info("새로 임베딩한 규정 문서를 저장합니다...")
     post_json(
         supabase_url(documents_table()),
         supabase_headers({"Prefer": "return=minimal"}),
         rows,
     )
-    print(f"저장 완료: {len(rows)}건")
+    logger.info("저장 완료: %d건", len(rows))
 
 
 def main() -> int:
     load_dotenv()
+    setup_logging()
     try:
         add_regulations()
     except RuntimeError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        logger.error("적재 실패: %s", exc)
         return 1
     return 0
 

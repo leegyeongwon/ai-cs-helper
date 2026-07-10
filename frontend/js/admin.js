@@ -244,10 +244,12 @@
 
   function saveAnswer(view, item, value, btn, msg) {
     if (offline) {
+      log("저장(오프라인): inquiry_id=" + item.inquiry_id + " — DB 미반영");
       applySaved(item, value, null);
       afterSave(view);
       return;
     }
+    log("저장 요청: inquiry_id=" + item.inquiry_id);
     btn.disabled = true;
     msg.textContent = "저장 중...";
     patchAnswer(item.inquiry_id, value)
@@ -390,11 +392,13 @@
       .then(function (rows) {
         inquiries = rows.map(normalize);
         offline = false;
+        log("관리자 부팅: API 연결 성공,", inquiries.length, "건 로드");
         renderEverything();
       })
       .catch(function () {
         inquiries = (window.MOCK_INQUIRIES || []).map(normalize);
         offline = true;
+        logError("관리자 부팅: API 연결 실패 → 오프라인 데모 데이터", inquiries.length, "건 사용");
         showOfflineBanner();
         renderEverything();
       });

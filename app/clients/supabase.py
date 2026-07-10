@@ -4,12 +4,15 @@ documents 테이블에 임베딩 문서를 저장/조회.
 """
 
 import json
+import logging
 import os
 import urllib.parse
 import urllib.request
 from typing import Any
 
 from app.clients.http import env, read_json
+
+logger = logging.getLogger(__name__)
 
 
 def supabase_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
@@ -94,7 +97,9 @@ def insert_inquiry(state: dict) -> str:
         method="POST",
     )
     result = read_json(request)
-    return result[0]["inquiry_id"]
+    new_id = result[0]["inquiry_id"]
+    logger.info("inquiries INSERT: inquiry_id=%s", new_id)
+    return new_id
 
 
 # 시스템이 하는 업데이트는 여기서 끝. 직원용 웹에서 수정/승인 해서 버튼 누르면 DB가 진짜 마지막으로 수정되고 문의 처리가 끝남.
@@ -108,6 +113,7 @@ def update_inquiry(state: dict) -> None:
         method="PATCH",
     )
     read_json(request)
+    logger.info("inquiries UPDATE: inquiry_id=%s", state["inquiry_id"])
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +127,9 @@ def list_inquiries() -> list[dict[str, Any]]:
         headers=supabase_headers(),
         method="GET",
     )
-    return read_json(request) or []
+    rows = read_json(request) or []
+    logger.info("inquiries 목록 조회: %d건", len(rows))
+    return rows
 
 
 def get_inquiry(inquiry_id: str) -> dict[str, Any] | None:
@@ -132,6 +140,7 @@ def get_inquiry(inquiry_id: str) -> dict[str, Any] | None:
         method="GET",
     )
     rows = read_json(request) or []
+    logger.info("inquiries 단건 조회: inquiry_id=%s 존재=%s", inquiry_id, bool(rows))
     return rows[0] if rows else None
 
 
@@ -158,4 +167,5 @@ def update_final_answer(
         method="PATCH",
     )
     rows = read_json(request) or []
+    logger.info("최종 답변 저장: inquiry_id=%s 성공=%s", inquiry_id, bool(rows))
     return rows[0] if rows else None

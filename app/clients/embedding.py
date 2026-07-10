@@ -2,7 +2,11 @@
 임베딩 관련 함수.
 """
 
+import logging
+
 from app.clients.http import env, post_json
+
+logger = logging.getLogger(__name__)
 
 
 def embedding_config(kind: str) -> tuple[str, str, str]:
@@ -18,6 +22,7 @@ def embedding_config(kind: str) -> tuple[str, str, str]:
 def embed(text: str, kind: str) -> list[float]:
     """텍스트를 임베딩한다. kind는 'query' 또는 'passage'."""
     base_url, api_key, model = embedding_config(kind)
+    logger.debug("임베딩 요청: kind=%s model=%s 입력=%d자", kind, model, len(text))
     response = post_json(
         f"{base_url}/embeddings",
         {
