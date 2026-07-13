@@ -156,6 +156,7 @@ textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); 
   color: var(--text-secondary);
   border: 1px solid var(--baseline);
 }
+.btn.danger { background: #c93737; color: #fff; }
 .compose .actions { margin-top: 16px; display: flex; justify-content: flex-end; }
 .toast {
   margin-top: 16px;
@@ -304,7 +305,14 @@ textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); 
   display: flex; align-items: center; justify-content: center;
   min-height: 300px; color: var(--text-muted); font-size: 14px;
 }
-.detail h3 { margin: 0 0 16px; font-size: 16px; }
+.detail h3 { margin: 0; font-size: 16px; }
+.detail-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
 .meta-grid {
   display: grid;
   grid-template-columns: 120px 1fr;
