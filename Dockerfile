@@ -8,11 +8,9 @@ ENV UV_LINK_MODE=copy
 ENV UV_COMPILE_BYTECODE=1
 # 의존성 파일 먼저 복사
 COPY pyproject.toml uv.lock ./
-# 가상환경을 생성하고 패키지 설치 (--system 대신 가상환경 사용)
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv venv /app/.venv && \
-    . /app/.venv/bin/activate && \
-    uv pip install fastapi python-dotenv uvicorn
+    uv sync --frozen --no-dev
 
 # --- Runtime Stage ---
 FROM python:3.12-slim-bookworm AS runner

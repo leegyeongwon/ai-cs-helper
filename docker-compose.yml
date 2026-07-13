@@ -1,7 +1,5 @@
 services:
   backend:
-    profiles:
-      - backend
     build:
       context: .
       dockerfile: Dockerfile
