@@ -154,6 +154,7 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     needs: [lint, test]           # 두 Job의 결과(needs.*.result)를 참조하기 위해 명시
     permissions:
+      contents: read
       pull-requests: write        # PR에 코멘트를 달 수 있는 권한 부여
     steps:
       - name: Post Comment
