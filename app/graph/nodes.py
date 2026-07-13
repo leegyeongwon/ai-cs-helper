@@ -8,6 +8,7 @@ import logging
 from app.clients import llm
 from app.clients.supabase import insert_inquiry, update_inquiry
 from app.graph.state import InquiryState
+from app.privacy.masking import mask_personal_info
 from app.rag.search import search
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,11 @@ def _last_user_text(state: InquiryState) -> str:
     if not state["messages"]:
         return ""
     return state["messages"][-1].content
+
+
+def _query_text(state: InquiryState) -> str:
+    """외부 서비스에는 마스킹된 문의만 반환한다."""
+    return state["masked_text"] or ""
 
 
 def _parse_llm_json(raw: str) -> dict:
@@ -51,9 +57,17 @@ def save_to_db_node(state: InquiryState) -> dict:
     return {}
 
 
+def mask_personal_info_node(state: InquiryState) -> dict[str, str]:
+    """원문은 유지하고 외부 서비스용 문의에서 개인정보를 마스킹한다."""
+    original = _last_user_text(state)
+    masked = mask_personal_info(original)
+    logger.info("personal_info_mask: 마스킹 적용=%s", original != masked)
+    return {"masked_text": masked}
+
+
 def rag_search_node(state: InquiryState) -> dict:
     """문의 원문으로 규정 문서를 검색해 retrieved_docs를 채운다."""
-    query_text = _last_user_text(state)
+    query_text = _query_text(state)
     results = search(query_text, top_k=5)
     docs = [
         {"content": doc["content"], "metadata": doc.get("metadata", {}), "score": score}
@@ -70,7 +84,7 @@ def router_node(state: InquiryState) -> dict:
     intent가 None이면 최초 호출(판단+생성).
     intent가 이미 있으면 재시도 호출(답변만 재생성, review_feedback 참고).
     """
-    query_text = _last_user_text(state)
+    query_text = _query_text(state)
     docs_text = "\n".join(f"- {d['content']}" for d in state["retrieved_docs"])
 
     if state["intent"] is None:
@@ -171,7 +185,7 @@ def router_node(state: InquiryState) -> dict:
 
 def review_node(state: InquiryState) -> dict:
     """ROUTER: 평가 및 재시도. ai_answer의 타당성을 검증한다."""
-    query_text = _last_user_text(state)
+    query_text = _query_text(state)
 
     prompt = f"""당신은 AI가 생성한 고객 문의 답변이 타당한지 검토하는 검수자입니다.
 

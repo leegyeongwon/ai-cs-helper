@@ -85,7 +85,7 @@ def remove_inquiry(inquiry_id: str) -> dict[str, str]:
 @app.post("/inquiries")
 def create_inquiry(payload: InquiryRequest) -> dict[str, str]:
     """유저 문의를 받아 그래프를 실행한다. inquiry_id는 DB가 알아서 생성한다."""
-    logger.info("POST /inquiries 수신 (문의 %d자): %r", len(payload.text), payload.text[:80])
+    logger.info("POST /inquiries 수신 (문의 %d자)", len(payload.text))
     initial_state = create_initial_state(
         session_id=str(uuid.uuid4()),
         inquiry_id=None,

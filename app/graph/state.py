@@ -7,6 +7,9 @@ from langgraph.graph.message import add_messages
 class InquiryState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
+    # 외부 임베딩/LLM 서비스에 전달할 개인정보 마스킹 문의
+    masked_text: str | None
+
     # Router 노드에서 결정된 의도
     intent: Literal["to_human", "AI_generate"] | None
 
@@ -61,6 +64,7 @@ def create_initial_state(
     """
     return InquiryState(
         messages=messages or [],
+        masked_text=None,
         intent=None,
         retrieved_docs=[],
         categories=None,
