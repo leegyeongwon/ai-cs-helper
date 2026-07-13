@@ -12,9 +12,7 @@ logger = logging.getLogger(__name__)
 def embedding_config(kind: str) -> tuple[str, str, str]:
     """(base_url, api_key, model)을 반환한다."""
     model_env = (
-        "UPSTAGE_EMBEDDING_QUERY_MODEL"
-        if kind == "query"
-        else "UPSTAGE_EMBEDDING_PASSAGE_MODEL"
+        "UPSTAGE_EMBEDDING_QUERY_MODEL" if kind == "query" else "UPSTAGE_EMBEDDING_PASSAGE_MODEL"
     )
     return env("UPSTAGE_BASE_URL").rstrip("/"), env("UPSTAGE_API_KEY"), env(model_env)
 

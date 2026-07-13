@@ -102,7 +102,8 @@ def insert_inquiry(state: dict) -> str:
     return new_id
 
 
-# 시스템이 하는 업데이트는 여기서 끝. 직원용 웹에서 수정/승인 해서 버튼 누르면 DB가 진짜 마지막으로 수정되고 문의 처리가 끝남.
+# 시스템이 하는 업데이트는 여기서 끝. 직원용 웹에서 수정/승인 해서 버튼 누르면
+# DB가 진짜 마지막으로 수정되고 문의 처리가 끝남.
 def update_inquiry(state: dict) -> None:
     """마지막 저장. inquiry_id를 기준으로 UPDATE. 이 업데이트를 끝으로 그래프는 종료됨"""
     values = _serialize_inquiry_state(state)
@@ -119,6 +120,7 @@ def update_inquiry(state: dict) -> None:
 # ---------------------------------------------------------------------------
 # 관리자 페이지에서 쓰는 조회/수정 함수
 # ---------------------------------------------------------------------------
+
 
 def list_inquiries() -> list[dict[str, Any]]:
     """전체 문의를 최신순으로 가져온다."""
