@@ -243,29 +243,73 @@
         '<div class="answer-final">' + esc(item.final_answer) + "</div>";
       return;
     }
-    var noteHtml = item.ai_answer
-      ? ""
+    var hasAiAnswer = !!String(item.ai_answer || "").trim();
+    var noteHtml = hasAiAnswer
+      ? '<p class="answer-note">AI 답변을 승인하거나 수정할 수 있습니다.</p>'
       : '<p class="answer-note">AI 답변 없음 — 상담원이 직접 작성해야 합니다.</p>';
+    var buttonsHtml = hasAiAnswer
+      ? '<button type="button" class="btn" id="approve-answer">답변 승인</button>' +
+        '<button type="button" class="btn secondary" id="edit-answer">수정</button>'
+      : '<button type="button" class="btn" id="register-answer">답변 등록</button>';
     slot.innerHTML =
       noteHtml +
-      '<textarea id="answer-input" placeholder="답변을 입력하세요">' + esc(item.ai_answer || "") + "</textarea>" +
+      '<textarea id="answer-input" placeholder="답변을 입력하세요"' +
+        (hasAiAnswer ? " readonly" : "") + ">" + esc(item.ai_answer || "") + "</textarea>" +
       '<div class="answer-actions">' +
-        '<button type="button" class="btn" id="save-answer">최종 답변으로 저장</button>' +
+        buttonsHtml +
         '<span class="answer-note" id="save-msg"></span>' +
       "</div>";
 
-    slot.querySelector("#save-answer").addEventListener("click", function () {
+    var approveBtn = slot.querySelector("#approve-answer");
+    if (approveBtn) {
+      approveBtn.addEventListener("click", function () {
+        saveAnswer(view, item, String(item.ai_answer).trim(), approveBtn, slot.querySelector("#save-msg"));
+      });
+    }
+
+    var editBtn = slot.querySelector("#edit-answer");
+    if (editBtn) {
+      editBtn.addEventListener("click", function () {
+        enterAnswerEditMode(slot, view, item);
+      });
+    }
+
+    var registerBtn = slot.querySelector("#register-answer");
+    if (registerBtn) registerBtn.addEventListener("click", function () {
       var input = slot.querySelector("#answer-input");
       var value = input.value.trim();
       if (!value) { input.focus(); return; }
-      saveAnswer(view, item, value, slot.querySelector("#save-answer"), slot.querySelector("#save-msg"));
+      saveAnswer(view, item, value, this, slot.querySelector("#save-msg"));
     });
+  }
+
+  function enterAnswerEditMode(slot, view, item) {
+    var input = slot.querySelector("#answer-input");
+    var actions = slot.querySelector(".answer-actions");
+    input.readOnly = false;
+    actions.innerHTML =
+      '<button type="button" class="btn" id="register-answer">답변 등록</button>' +
+      '<button type="button" class="btn secondary" id="cancel-edit">수정 취소</button>' +
+      '<span class="answer-note" id="save-msg"></span>';
+
+    actions.querySelector("#register-answer").addEventListener("click", function () {
+      var value = input.value.trim();
+      if (!value) { input.focus(); return; }
+      saveAnswer(view, item, value, this, actions.querySelector("#save-msg"));
+    });
+    actions.querySelector("#cancel-edit").addEventListener("click", function () {
+      renderAnswer(slot, view, item);
+    });
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
   }
 
   function applySaved(item, value, updated) {
     item.final_answer = (updated && updated.final_answer) || value;
     item.status = (updated && updated.status) || DONE_STATUS;
-    item.reviewer_type = (updated && updated.reviewer_type) || "human";
+    var aiAnswer = String(item.ai_answer || "").trim();
+    var inferredReviewer = aiAnswer && value.trim() === aiAnswer ? "ai" : "human";
+    item.reviewer_type = (updated && updated.reviewer_type) || inferredReviewer;
   }
   function afterSave(view) {
     renderDetail(view);

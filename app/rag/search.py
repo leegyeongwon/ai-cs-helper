@@ -24,7 +24,7 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     return dot / (norm_a * norm_b)
 
 
-def search(query_text: str, top_k: int = 3) -> list[tuple[float, dict[str, Any]]]:
+def search(query_text: str, top_k: int = 5) -> list[tuple[float, dict[str, Any]]]:
     """
     질의와 유사한 문서를 (score, doc) 리스트로 반환.
 
