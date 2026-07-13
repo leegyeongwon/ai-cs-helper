@@ -61,3 +61,34 @@ def test_embedding_does_not_retry_other_errors(monkeypatch):
         assert "HTTP 401" in str(exc)
     else:
         raise AssertionError("RuntimeError was not raised")
+
+
+def test_store_documents_uses_batches(monkeypatch):
+    batch_sizes = []
+    monkeypatch.setattr(ingest, "SUPABASE_BATCH_SIZE", 2)
+    monkeypatch.setattr(
+        ingest,
+        "_store_document_batch",
+        lambda rows: batch_sizes.append(len(rows)),
+    )
+
+    ingest.store_documents([{"id": number} for number in range(5)])
+
+    assert batch_sizes == [2, 2, 1]
+
+
+def test_storage_timeout_splits_batch(monkeypatch):
+    stored_sizes = []
+
+    def fake_post_json(url, headers, rows):
+        stored_sizes.append(len(rows))
+        if len(rows) > 1:
+            raise RuntimeError('HTTP 500: {"code":"57014"}')
+
+    monkeypatch.setattr(ingest, "post_json", fake_post_json)
+    monkeypatch.setattr(ingest, "supabase_url", lambda *args: "https://example.test")
+    monkeypatch.setattr(ingest, "supabase_headers", lambda *args: {})
+
+    ingest._store_document_batch([{"id": number} for number in range(4)])
+
+    assert stored_sizes == [4, 2, 1, 1, 2, 1, 1]

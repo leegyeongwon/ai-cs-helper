@@ -30,6 +30,8 @@ EMBEDDING_TPM = 300_000
 # 정확히 0.6초보다 약간 여유를 둬 분당 100회 경계 오차를 피한다.
 REQUEST_INTERVAL_SECONDS = 60 / EMBEDDING_RPM + 0.05
 MAX_RATE_LIMIT_RETRIES = 5
+SUPABASE_BATCH_SIZE = 10
+MAX_STORAGE_RETRIES = 5
 
 
 class EmbeddingRateLimiter:
@@ -125,6 +127,62 @@ def delete_all_documents() -> None:
     read_json(request)
 
 
+def _store_document_batch(rows: list[dict[str, Any]]) -> None:
+    """문서 배치를 저장한다. statement timeout이면 더 작은 배치로 분할한다."""
+    if not rows:
+        return
+
+    for attempt in range(MAX_STORAGE_RETRIES + 1):
+        try:
+            post_json(
+                supabase_url(documents_table()),
+                supabase_headers({"Prefer": "return=minimal"}),
+                rows,
+            )
+            return
+        except RuntimeError as exc:
+            message = str(exc)
+            is_statement_timeout = '"code":"57014"' in message
+            is_connection_failure = "Connection failed:" in message
+
+            if is_statement_timeout and len(rows) > 1:
+                midpoint = len(rows) // 2
+                logger.warning(
+                    "Supabase 저장 timeout: %d건을 %d건/%d건으로 분할",
+                    len(rows),
+                    midpoint,
+                    len(rows) - midpoint,
+                )
+                _store_document_batch(rows[:midpoint])
+                _store_document_batch(rows[midpoint:])
+                return
+
+            if not is_connection_failure or attempt >= MAX_STORAGE_RETRIES:
+                raise
+
+            delay = min(60, 5 * (2**attempt))
+            logger.warning(
+                "Supabase 연결 실패: %d/%d회 재시도 전 %d초 대기",
+                attempt + 1,
+                MAX_STORAGE_RETRIES,
+                delay,
+            )
+            time.sleep(delay)
+
+
+def store_documents(rows: list[dict[str, Any]]) -> None:
+    """문서를 작은 배치로 나눠 Supabase에 저장한다."""
+    total = len(rows)
+    for start in range(0, total, SUPABASE_BATCH_SIZE):
+        batch = rows[start : start + SUPABASE_BATCH_SIZE]
+        _store_document_batch(batch)
+        logger.info(
+            "문서 저장 진행: %d/%d건",
+            min(start + len(batch), total),
+            total,
+        )
+
+
 def add_regulations() -> None:
     """기존 문서를 지우고 규정 전체를 새로 임베딩해 적재한다."""
     logger.info("총 %d개의 규정을 임베딩합니다.", len(REGULATIONS))
@@ -134,11 +192,7 @@ def add_regulations() -> None:
     delete_all_documents()
 
     logger.info("새로 임베딩한 규정 문서를 저장합니다...")
-    post_json(
-        supabase_url(documents_table()),
-        supabase_headers({"Prefer": "return=minimal"}),
-        rows,
-    )
+    store_documents(rows)
     logger.info("저장 완료: %d건", len(rows))
 
 
