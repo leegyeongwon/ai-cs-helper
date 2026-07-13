@@ -41,6 +41,9 @@ def search(query_text: str, top_k: int = 3) -> list[tuple[float, dict[str, Any]]
     top = scored[:top_k]
     logger.info(
         "RAG 검색: 질의=%r 전체문서=%d 상위%d 최고점수=%.4f",
-        query_text[:80], len(docs), len(top), top[0][0] if top else 0.0,
+        query_text[:80],
+        len(docs),
+        len(top),
+        top[0][0] if top else 0.0,
     )
     return top

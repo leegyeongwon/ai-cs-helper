@@ -5,7 +5,6 @@ app/rag/regulations.py의 REGULATIONS를 임베딩해서 저장한다.
 """
 
 import logging
-import sys
 import urllib.request
 from typing import Any
 

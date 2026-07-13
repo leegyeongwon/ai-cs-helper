@@ -6,9 +6,9 @@ import json
 import logging
 
 from app.clients import llm
+from app.clients.supabase import insert_inquiry, update_inquiry
 from app.graph.state import InquiryState
 from app.rag.search import search
-from app.clients.supabase import insert_inquiry, update_inquiry
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,9 @@ def save_to_db_node(state: InquiryState) -> dict:
         logger.info("save_to_db: INSERT 완료 inquiry_id=%s", new_id)
         return {"inquiry_id": new_id}
     update_inquiry(state)
-    logger.info("save_to_db: UPDATE 완료 inquiry_id=%s status=%s", state["inquiry_id"], state["status"])
+    logger.info(
+        "save_to_db: UPDATE 완료 inquiry_id=%s status=%s", state["inquiry_id"], state["status"]
+    )
     return {}
 
 
@@ -119,7 +121,8 @@ def router_node(state: InquiryState) -> dict:
     ai_answer = parsed.get("ai_answer")
     logger.info(
         "router: intent=%s categories=%s ai_answer=%s",
-        intent, parsed.get("categories"),
+        intent,
+        parsed.get("categories"),
         "생성됨(%d자)" % len(ai_answer) if ai_answer else "없음(null)",
     )
     if intent == "AI_generate" and not ai_answer:
@@ -164,7 +167,9 @@ def review_node(state: InquiryState) -> dict:
         updates["retry_count"] = state["retry_count"] + 1
         logger.info(
             "review: FAIL (retry_count %d -> %d, MAX=%d) 사유=%r",
-            state["retry_count"], updates["retry_count"], MAX_RETRY,
+            state["retry_count"],
+            updates["retry_count"],
+            MAX_RETRY,
             parsed.get("review_feedback"),
         )
     else:

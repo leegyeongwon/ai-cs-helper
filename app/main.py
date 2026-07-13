@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -6,12 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
-import uuid
+from app.clients.supabase import get_inquiry, list_inquiries, update_final_answer
+from app.graph.graph import graph
+from app.graph.state import create_initial_state
+from app.logging_config import setup_logging
 
 # 로컬 실행 시 .env를 로드한다 (Supabase/LLM 자격증명 등).
 load_dotenv()
 
-from app.logging_config import setup_logging
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -101,8 +104,10 @@ def create_inquiry(payload: InquiryRequest) -> dict[str, str]:
         raise
     logger.info(
         "그래프 실행 종료: inquiry_id=%s intent=%s ai_answer=%s status=%s",
-        result.get("inquiry_id"), result.get("intent"),
-        "있음" if result.get("ai_answer") else "없음", result.get("status"),
+        result.get("inquiry_id"),
+        result.get("intent"),
+        "있음" if result.get("ai_answer") else "없음",
+        result.get("status"),
     )
 
     return {"inquiry_id": result["inquiry_id"], "session_id": result["session_id"]}

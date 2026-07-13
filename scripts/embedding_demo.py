@@ -12,13 +12,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dotenv import load_dotenv
 
 from app.clients.embedding import embed
+from app.clients.http import post_json
 from app.clients.supabase import (
     documents_table,
     supabase_headers,
     supabase_url,
     vector_literal,
 )
-from app.clients.http import post_json
 from app.rag.search import search
 
 
