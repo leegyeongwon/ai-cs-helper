@@ -54,7 +54,7 @@ def save_to_db_node(state: InquiryState) -> dict:
 def rag_search_node(state: InquiryState) -> dict:
     """문의 원문으로 규정 문서를 검색해 retrieved_docs를 채운다."""
     query_text = _last_user_text(state)
-    results = search(query_text, top_k=3)
+    results = search(query_text, top_k=5)
     docs = [
         {"content": doc["content"], "metadata": doc.get("metadata", {}), "score": score}
         for score, doc in results
@@ -84,7 +84,7 @@ def router_node(state: InquiryState) -> dict:
 
 아래 JSON 형식으로만 답하세요. 다른 텍스트는 포함하지 마세요. 
 {{
-  "intent": "AI_generate 또는 to_human 중 하나. 관련 규정만으로 답변 가능하면 AI_generate, 불가능하면 to_human",
+  "intent": "AI_generate 또는 to_human 중 하나. 관련 규정에 기반하여 답변 가능하면 AI_generate, 불가능하면 to_human을 선택하세요. 최대한 AI가 답변할수 있도록 하세요. 정말 적절한 규정이 없어 답변자체가 불가능할때 to_human을 선택하세요.",
   "categories": "문의 카테고리 (예: 환불, 배송, 개인정보, 등)",
   "ai_answer": "intent가 AI_generate일 때 생성한 답변. to_human이면 null"
 }}"""
