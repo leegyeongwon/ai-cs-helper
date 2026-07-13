@@ -16,7 +16,7 @@ from app.logging_config import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-from app.clients.supabase import get_inquiry, list_inquiries, update_final_answer
+from app.clients.supabase import delete_inquiry, get_inquiry, list_inquiries, update_final_answer
 from app.graph.graph import graph
 from app.graph.state import create_initial_state
 
@@ -71,6 +71,16 @@ def save_final_answer(inquiry_id: str, payload: AnswerUpdate) -> dict:
         logger.warning("PATCH /inquiries/%s -> 404", inquiry_id)
         raise HTTPException(status_code=404, detail="inquiry not found")
     return updated
+
+
+@app.delete("/inquiries/{inquiry_id}")
+def remove_inquiry(inquiry_id: str) -> dict[str, str]:
+    """상담 내역 한 건을 영구 삭제한다."""
+    logger.info("DELETE /inquiries/%s", inquiry_id)
+    if not delete_inquiry(inquiry_id):
+        logger.warning("DELETE /inquiries/%s -> 404", inquiry_id)
+        raise HTTPException(status_code=404, detail="inquiry not found")
+    return {"inquiry_id": inquiry_id, "status": "deleted"}
 
 
 @app.post("/inquiries")

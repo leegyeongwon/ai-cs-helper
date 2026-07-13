@@ -40,6 +40,23 @@ function patchAnswer(inquiryId, finalAnswer) {
   });
 }
 
+// 상담 내역 영구 삭제
+function deleteInquiry(inquiryId) {
+  log("DELETE /inquiries/" + inquiryId);
+  return fetch(API_BASE + "/inquiries/" + encodeURIComponent(inquiryId), {
+    method: "DELETE",
+  }).then(function (res) {
+    if (!res.ok) throw new Error("DELETE /inquiries " + res.status);
+    return res.json();
+  }).then(function (data) {
+    log("DELETE /inquiries/" + inquiryId + " -> 삭제 완료");
+    return data;
+  }).catch(function (err) {
+    logError("DELETE /inquiries 실패:", err.message);
+    throw err;
+  });
+}
+
 // 문의 등록 (그래프 파이프라인 실행)
 function postInquiry(text) {
   log("POST /inquiries (" + text.length + "자)");
@@ -63,3 +80,4 @@ window.API_BASE = API_BASE;
 window.getInquiries = getInquiries;
 window.patchAnswer = patchAnswer;
 window.postInquiry = postInquiry;
+window.deleteInquiry = deleteInquiry;

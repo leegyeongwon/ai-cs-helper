@@ -188,7 +188,8 @@
       : '<div class="docs-empty">검색된 참고 문서가 없습니다.</div>';
 
     container.innerHTML =
-      "<h3>문의 상세</h3>" +
+      '<div class="detail-heading"><h3>문의 상세</h3>' +
+        '<button type="button" class="btn danger" data-role="delete-inquiry">상담내역 삭제</button></div>' +
       '<dl class="meta-grid">' +
         "<dt>등록일시</dt><dd>" + esc(fmtDate(item.created_at)) + "</dd>" +
         "<dt>카테고리</dt><dd><span class='badge cat-" + esc(item.categories) + "'>" + esc(item.categories) + "</span></dd>" +
@@ -201,7 +202,38 @@
       '<div class="section-label">답변</div>' +
       '<div id="answer-slot"></div>';
 
+    container.querySelector('[data-role="delete-inquiry"]').addEventListener("click", function () {
+      requestDelete(view, item, this);
+    });
+
     renderAnswer(container.querySelector("#answer-slot"), view, item);
+  }
+
+  function removeFromScreen(inquiryId) {
+    inquiries = inquiries.filter(function (item) { return item.inquiry_id !== inquiryId; });
+    if (viewState.all.selectedId === inquiryId) viewState.all.selectedId = null;
+    if (viewState.pending.selectedId === inquiryId) viewState.pending.selectedId = null;
+    renderEverything();
+  }
+
+  function requestDelete(view, item, btn) {
+    if (!window.confirm("이 상담 내역을 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.")) return;
+
+    if (offline) {
+      log("삭제(오프라인): inquiry_id=" + item.inquiry_id + " — DB 미반영");
+      removeFromScreen(item.inquiry_id);
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "삭제 중...";
+    deleteInquiry(item.inquiry_id)
+      .then(function () { removeFromScreen(item.inquiry_id); })
+      .catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = "상담내역 삭제";
+        window.alert("삭제에 실패했습니다. (" + err.message + ")");
+      });
   }
 
   function renderAnswer(slot, view, item) {

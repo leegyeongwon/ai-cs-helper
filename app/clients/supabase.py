@@ -169,3 +169,16 @@ def update_final_answer(
     rows = read_json(request) or []
     logger.info("최종 답변 저장: inquiry_id=%s 성공=%s", inquiry_id, bool(rows))
     return rows[0] if rows else None
+
+
+def delete_inquiry(inquiry_id: str) -> bool:
+    """문의 한 건을 삭제한다. 삭제된 행이 없으면 False를 반환한다."""
+    request = urllib.request.Request(
+        supabase_url(inquiries_table(), {"inquiry_id": f"eq.{inquiry_id}"}),
+        headers=supabase_headers({"Prefer": "return=representation"}),
+        method="DELETE",
+    )
+    rows = read_json(request) or []
+    deleted = bool(rows)
+    logger.info("문의 삭제: inquiry_id=%s 성공=%s", inquiry_id, deleted)
+    return deleted
