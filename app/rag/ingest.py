@@ -78,10 +78,7 @@ def _embed_with_retry(text: str, limiter: EmbeddingRateLimiter) -> list[float]:
             message = str(exc)
             is_rate_limit = "HTTP 429" in message
             is_connection_failure = "Connection failed:" in message
-            if (
-                not (is_rate_limit or is_connection_failure)
-                or attempt >= MAX_RATE_LIMIT_RETRIES
-            ):
+            if not (is_rate_limit or is_connection_failure) or attempt >= MAX_RATE_LIMIT_RETRIES:
                 raise
             delay = min(60, 5 * (2**attempt))
             reason = "요청 제한(429)" if is_rate_limit else "네트워크 연결 실패"
