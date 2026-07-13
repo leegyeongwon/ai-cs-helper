@@ -5,7 +5,9 @@ app/rag/regulations.py의 REGULATIONS를 임베딩해서 저장한다.
 """
 
 import logging
+import time
 import urllib.request
+from collections import deque
 from typing import Any
 
 from dotenv import load_dotenv
@@ -23,9 +25,72 @@ from app.rag.regulations import REGULATIONS
 
 logger = logging.getLogger(__name__)
 
+EMBEDDING_RPM = 100
+EMBEDDING_TPM = 300_000
+# 정확히 0.6초보다 약간 여유를 둬 분당 100회 경계 오차를 피한다.
+REQUEST_INTERVAL_SECONDS = 60 / EMBEDDING_RPM + 0.05
+MAX_RATE_LIMIT_RETRIES = 5
 
-def build_regulation_rows() -> list[dict[str, Any]]:
+
+class EmbeddingRateLimiter:
+    """임베딩 요청을 RPM/TPM 제한 안에서 순차 실행하도록 조절한다."""
+
+    def __init__(self) -> None:
+        self.last_request_at: float | None = None
+        self.token_events: deque[tuple[float, int]] = deque()
+
+    def wait(self, text: str) -> None:
+        # 별도 tokenizer 없이 글자 수를 토큰 수로 간주해 보수적으로 계산한다.
+        estimated_tokens = max(1, len(text))
+        while True:
+            now = time.monotonic()
+            while self.token_events and now - self.token_events[0][0] >= 60:
+                self.token_events.popleft()
+
+            rpm_wait = 0.0
+            if self.last_request_at is not None:
+                rpm_wait = max(0.0, REQUEST_INTERVAL_SECONDS - (now - self.last_request_at))
+
+            used_tokens = sum(tokens for _, tokens in self.token_events)
+            tpm_wait = 0.0
+            if used_tokens + estimated_tokens > EMBEDDING_TPM and self.token_events:
+                tpm_wait = max(0.0, 60 - (now - self.token_events[0][0]) + 0.05)
+
+            wait_seconds = max(rpm_wait, tpm_wait)
+            if wait_seconds <= 0:
+                now = time.monotonic()
+                self.last_request_at = now
+                self.token_events.append((now, estimated_tokens))
+                return
+            logger.info("임베딩 rate limit 대기: %.2f초", wait_seconds)
+            time.sleep(wait_seconds)
+
+
+def _embed_with_retry(text: str, limiter: EmbeddingRateLimiter) -> list[float]:
+    """제한에 맞춰 임베딩하고 429 응답은 백오프 후 재시도한다."""
+    for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
+        limiter.wait(text)
+        try:
+            return embed(text, "passage")
+        except RuntimeError as exc:
+            if "HTTP 429" not in str(exc) or attempt >= MAX_RATE_LIMIT_RETRIES:
+                raise
+            delay = min(60, 5 * (2**attempt))
+            logger.warning(
+                "임베딩 요청 제한(429): %d/%d회 재시도 전 %d초 대기",
+                attempt + 1,
+                MAX_RATE_LIMIT_RETRIES,
+                delay,
+            )
+            time.sleep(delay)
+    raise RuntimeError("embedding retry exhausted")
+
+
+def build_regulation_rows(
+    limiter: EmbeddingRateLimiter | None = None,
+) -> list[dict[str, Any]]:
     """REGULATIONS를 임베딩해 저장용 row 목록으로 만든다."""
+    limiter = limiter or EmbeddingRateLimiter()
     rows = []
     for regulation_id, text in REGULATIONS.items():
         text = text.strip()
@@ -36,7 +101,7 @@ def build_regulation_rows() -> list[dict[str, Any]]:
             {
                 "content": text,
                 "metadata": {"source": "regulation", "regulation_id": regulation_id},
-                "embedding": vector_literal(embed(text, "passage")),
+                "embedding": vector_literal(_embed_with_retry(text, limiter)),
             }
         )
     return rows
