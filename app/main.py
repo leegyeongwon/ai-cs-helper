@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
-from app.clients.supabase import get_inquiry, list_inquiries, update_final_answer
+from app.clients.supabase import delete_inquiry, get_inquiry, list_inquiries, update_final_answer
 from app.graph.graph import graph
 from app.graph.state import create_initial_state
 from app.logging_config import setup_logging
@@ -18,10 +18,6 @@ load_dotenv()
 
 setup_logging()
 logger = logging.getLogger(__name__)
-
-from app.clients.supabase import delete_inquiry, get_inquiry, list_inquiries, update_final_answer
-from app.graph.graph import graph
-from app.graph.state import create_initial_state
 
 app = FastAPI(title="AI CS Helper", version="0.1.0")
 
