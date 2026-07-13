@@ -359,6 +359,7 @@ textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); 
 }
 .answer-note { font-size: 13px; color: var(--text-muted); margin: 0 0 8px; }
 .answer-actions { margin-top: 12px; display: flex; align-items: center; gap: 12px; }
+textarea[readonly] { background: var(--surface-1); cursor: default; }
 
 /* ===== 통계 ===== */
 .kpi-row {

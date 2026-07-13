@@ -149,16 +149,23 @@ def get_inquiry(inquiry_id: str) -> dict[str, Any] | None:
 def update_final_answer(
     inquiry_id: str,
     final_answer: str,
-    reviewer_type: str = "human",
     status: str = "답변 완료",
 ) -> dict[str, Any] | None:
     """관리자가 검토, 작성한 최종 답변을 저장한다.
 
-    final_answer와 함께 답변자를 human으로, 상태를 완료로 갱신한다.
+    AI 답변을 그대로 승인하면 답변자를 ai로, 수정하거나 AI 답변이 없으면
+    human으로 판정하고 상태를 완료로 갱신한다.
     갱신된 행을 반환한다(없으면 None).
     """
+    inquiry = get_inquiry(inquiry_id)
+    if inquiry is None:
+        return None
+
+    ai_answer = str(inquiry.get("ai_answer") or "").strip()
+    saved_answer = final_answer.strip()
+    reviewer_type = "ai" if ai_answer and saved_answer == ai_answer else "human"
     values = {
-        "final_answer": final_answer,
+        "final_answer": saved_answer,
         "reviewer_type": reviewer_type,
         "status": status,
     }

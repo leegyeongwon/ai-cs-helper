@@ -94,3 +94,36 @@ def test_embed_returns_embedding_from_api_response(monkeypatch):
     monkeypatch.setattr(embedding, "post_json", fake_post_json)
 
     assert embedding.embed("hello", "query") == [0.1, 0.2, 0.3]
+
+
+@pytest.mark.parametrize(
+    ("ai_answer", "final_answer", "expected_reviewer"),
+    [
+        ("AI가 만든 답변", "AI가 만든 답변", "ai"),
+        ("AI가 만든 답변", "수정한 답변", "human"),
+        ("", "상담원이 작성한 답변", "human"),
+        (None, "상담원이 작성한 답변", "human"),
+    ],
+)
+def test_update_final_answer_assigns_reviewer(
+    monkeypatch, ai_answer, final_answer, expected_reviewer
+):
+    captured = {}
+    monkeypatch.setattr(
+        supabase,
+        "get_inquiry",
+        lambda inquiry_id: {"inquiry_id": inquiry_id, "ai_answer": ai_answer},
+    )
+    monkeypatch.setattr(supabase, "supabase_url", lambda *args: "https://example.test")
+    monkeypatch.setattr(supabase, "supabase_headers", lambda *args: {})
+
+    def fake_read_json(request):
+        captured.update(json.loads(request.data.decode("utf-8")))
+        return [{"inquiry_id": "inq-1", **captured}]
+
+    monkeypatch.setattr(supabase, "read_json", fake_read_json)
+
+    updated = supabase.update_final_answer("inq-1", final_answer)
+
+    assert captured["reviewer_type"] == expected_reviewer
+    assert updated["reviewer_type"] == expected_reviewer

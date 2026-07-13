@@ -132,6 +132,7 @@ def router_node(state: InquiryState) -> dict:
         "intent": intent,
         "categories": parsed.get("categories"),
         "ai_answer": ai_answer,
+        "reviewer_type": None if ai_answer else "human",
         "status": "답변 생성",
     }
 
