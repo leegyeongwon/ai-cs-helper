@@ -67,17 +67,25 @@ class EmbeddingRateLimiter:
 
 
 def _embed_with_retry(text: str, limiter: EmbeddingRateLimiter) -> list[float]:
-    """제한에 맞춰 임베딩하고 429 응답은 백오프 후 재시도한다."""
+    """제한에 맞춰 임베딩하고 429/연결 실패는 백오프 후 재시도한다."""
     for attempt in range(MAX_RATE_LIMIT_RETRIES + 1):
         limiter.wait(text)
         try:
             return embed(text, "passage")
         except RuntimeError as exc:
-            if "HTTP 429" not in str(exc) or attempt >= MAX_RATE_LIMIT_RETRIES:
+            message = str(exc)
+            is_rate_limit = "HTTP 429" in message
+            is_connection_failure = "Connection failed:" in message
+            if (
+                not (is_rate_limit or is_connection_failure)
+                or attempt >= MAX_RATE_LIMIT_RETRIES
+            ):
                 raise
             delay = min(60, 5 * (2**attempt))
+            reason = "요청 제한(429)" if is_rate_limit else "네트워크 연결 실패"
             logger.warning(
-                "임베딩 요청 제한(429): %d/%d회 재시도 전 %d초 대기",
+                "임베딩 %s: %d/%d회 재시도 전 %d초 대기",
+                reason,
                 attempt + 1,
                 MAX_RATE_LIMIT_RETRIES,
                 delay,
