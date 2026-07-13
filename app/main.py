@@ -19,7 +19,6 @@ load_dotenv()
 setup_logging()
 logger = logging.getLogger(__name__)
 
-
 app = FastAPI(title="AI CS Helper", version="0.1.0")
 
 # 데모용 CORS: 정적 프론트엔드(file:// 또는 localhost)에서의 호출을 허용한다.
