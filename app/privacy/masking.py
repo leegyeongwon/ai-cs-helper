@@ -3,6 +3,7 @@
 import logging
 import re
 from collections import Counter
+from typing import TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -51,20 +52,31 @@ MASKING_RULES: tuple[tuple[str, re.Pattern[str], str], ...] = (
 )
 
 
-def mask_personal_info(text: str) -> str:
-    """알려진 개인정보 형식을 의미가 드러나는 마스킹 토큰으로 치환한다."""
+class MaskingResult(TypedDict):
+    masked_text: str
+    counts: dict[str, int]
+
+
+def mask_personal_info_with_details(text: str) -> MaskingResult:
+    """마스킹 결과와 유형별 치환 건수를 반환한다."""
     masked = text
     counts: Counter[str] = Counter()
     for name, pattern, replacement in MASKING_RULES:
         masked, count = pattern.subn(replacement, masked)
         counts[name] += count
 
-    summary = ", ".join(f"{name}={count}건" for name, count in counts.items() if count)
+    filtered_counts = {name: count for name, count in counts.items() if count}
+    summary = ", ".join(f"{name}={count}건" for name, count in filtered_counts.items())
     logger.info(
         "개인정보 마스킹 완료: 입력=%d자 출력=%d자 총=%d건 유형=%s",
         len(text),
         len(masked),
-        sum(counts.values()),
+        sum(filtered_counts.values()),
         summary or "없음",
     )
-    return masked
+    return {"masked_text": masked, "counts": filtered_counts}
+
+
+def mask_personal_info(text: str) -> str:
+    """알려진 개인정보 형식을 의미가 드러나는 마스킹 토큰으로 치환한다."""
+    return mask_personal_info_with_details(text)["masked_text"]

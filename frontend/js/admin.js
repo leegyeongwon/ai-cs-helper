@@ -1,4 +1,4 @@
-/* 관리자 페이지 — 백엔드 API 연동 (실패 시 데모 데이터로 폴백) */
+/* 관리자 페이지 — 백엔드 API 연동 */
 (function () {
   "use strict";
 
@@ -200,13 +200,76 @@
       '<div class="question-box">' + esc(item.question) + "</div>" +
       '<div class="section-label">참고 문서 (RAG)</div>' + docsHtml +
       '<div class="section-label">답변</div>' +
-      '<div id="answer-slot"></div>';
+      '<div id="answer-slot"></div>' +
+      '<div class="section-label">AI 처리 과정</div>' +
+      '<div class="timeline" data-role="processing-timeline">' +
+        '<div class="timeline-empty">처리 로그를 불러오는 중...</div>' +
+      "</div>";
 
     container.querySelector('[data-role="delete-inquiry"]').addEventListener("click", function () {
       requestDelete(view, item, this);
     });
 
     renderAnswer(container.querySelector("#answer-slot"), view, item);
+    loadTimeline(container.querySelector('[data-role="processing-timeline"]'), item);
+  }
+
+  function timelineClass(entry) {
+    if (entry.event.indexOf("failed") >= 0) return "error";
+    if (entry.event.indexOf("retry") >= 0 || entry.event.indexOf("regenerated") >= 0) return "warning";
+    if (entry.stage === "database") return "database";
+    if (entry.stage === "human") return "human";
+    if (entry.event.indexOf("passed") >= 0 || entry.event === "completed") return "success";
+    return "info";
+  }
+
+  function timelineMeta(entry) {
+    var parts = [];
+    if (entry.attempt != null) parts.push(entry.attempt + "차");
+    if (entry.duration_ms != null) parts.push(entry.duration_ms + "ms");
+    parts.push(fmtDate(entry.created_at));
+    return parts.filter(Boolean).join(" · ");
+  }
+
+  function renderTimeline(slot, entries) {
+    if (!entries.length) {
+      slot.innerHTML = '<div class="timeline-empty">저장된 처리 로그가 없습니다.</div>';
+      return;
+    }
+    slot.innerHTML = entries.map(function (entry) {
+      var hasData = entry.data && Object.keys(entry.data).length;
+      var detail = hasData
+        ? '<details class="timeline-detail"><summary>상세 데이터 보기</summary>' +
+          '<pre>' + esc(JSON.stringify(entry.data, null, 2)) + "</pre></details>"
+        : "";
+      return '<article class="timeline-item ' + timelineClass(entry) + '">' +
+        '<span class="timeline-dot" aria-hidden="true"></span>' +
+        '<div class="timeline-body">' +
+          '<div class="timeline-head"><strong>' + esc(entry.title) + "</strong>" +
+            '<span>' + esc(timelineMeta(entry)) + "</span></div>" +
+          (entry.message ? '<p>' + esc(entry.message) + "</p>" : "") +
+          detail +
+        "</div></article>";
+    }).join("");
+  }
+
+  function loadTimeline(slot, item) {
+    if (offline) {
+      slot.innerHTML = '<div class="timeline-empty">오프라인 데모에서는 처리 로그를 조회하지 않습니다.</div>';
+      return;
+    }
+    getInquiryLogs(item.inquiry_id)
+      .then(function (entries) { renderTimeline(slot, entries); })
+      .catch(function (err) {
+        slot.innerHTML = '<div class="timeline-empty error-text">로그 조회 실패: ' + esc(err.message) + "</div>";
+      });
+  }
+
+  function recordUiAction(item, event) {
+    if (offline) return;
+    postLogAction(item.inquiry_id, event).catch(function () {
+      // 행동 로그 실패는 답변 수정 UI를 막지 않는다.
+    });
   }
 
   function removeFromScreen(inquiryId) {
@@ -286,6 +349,7 @@
   function enterAnswerEditMode(slot, view, item) {
     var input = slot.querySelector("#answer-input");
     var actions = slot.querySelector(".answer-actions");
+    recordUiAction(item, "edit_started");
     input.readOnly = false;
     actions.innerHTML =
       '<button type="button" class="btn" id="register-answer">답변 등록</button>' +
@@ -298,6 +362,7 @@
       saveAnswer(view, item, value, this, actions.querySelector("#save-msg"));
     });
     actions.querySelector("#cancel-edit").addEventListener("click", function () {
+      recordUiAction(item, "edit_cancelled");
       renderAnswer(slot, view, item);
     });
     input.focus();
@@ -458,11 +523,11 @@
   function showOfflineBanner() {
     var main = document.querySelector("main.container");
     if (!main || document.getElementById("offline-banner")) return;
-    var banner = el('<div class="offline-banner" id="offline-banner">⚠ 백엔드에 연결하지 못해 데모 데이터를 표시합니다. (오프라인) 저장은 실제 DB에 반영되지 않습니다.</div>');
+    var banner = el('<div class="offline-banner" id="offline-banner">⚠ 백엔드에 연결하지 못했습니다. 서버 상태를 확인한 뒤 페이지를 새로고침해 주세요.</div>');
     main.insertBefore(banner, main.firstChild);
   }
 
-  // ---------- 부팅: API 우선, 실패 시 mock 폴백 ----------
+  // ---------- 부팅: 백엔드 API 조회 ----------
   function boot() {
     getInquiries()
       .then(function (rows) {
@@ -472,9 +537,9 @@
         renderEverything();
       })
       .catch(function () {
-        inquiries = (window.MOCK_INQUIRIES || []).map(normalize);
+        inquiries = [];
         offline = true;
-        logError("관리자 부팅: API 연결 실패 → 오프라인 데모 데이터", inquiries.length, "건 사용");
+        logError("관리자 부팅: API 연결 실패");
         showOfflineBanner();
         renderEverything();
       });

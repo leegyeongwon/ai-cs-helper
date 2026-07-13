@@ -1,3 +1,4 @@
+import time
 from typing import Annotated, Literal, TypedDict
 
 from langchain_core.messages import BaseMessage
@@ -42,6 +43,9 @@ class InquiryState(TypedDict):
     # 세션
     session_id: str
 
+    # 전체 파이프라인 소요 시간 계산용 시작 시각(epoch seconds)
+    pipeline_started_at: float
+
     # 문의 식별자 (DB의 inquiry_id와 매칭)
     inquiry_id: str | None
 
@@ -76,5 +80,6 @@ def create_initial_state(
         review_feedback=None,  # fail 사유 (재생성 시 참고)
         retry_count=0,
         session_id=session_id,
+        pipeline_started_at=time.time(),
         inquiry_id=inquiry_id,
     )

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
+from app.clients.inquiry_logs import append_inquiry_log, list_inquiry_logs
 from app.clients.supabase import delete_inquiry, get_inquiry, list_inquiries, update_final_answer
 from app.graph.graph import graph
 from app.graph.state import create_initial_state
@@ -38,6 +39,10 @@ class AnswerUpdate(BaseModel):
     final_answer: str
 
 
+class LogActionRequest(BaseModel):
+    event: str
+
+
 @app.get("/health")
 def health_check() -> dict[str, str]:
     return {"status": "ok"}
@@ -59,6 +64,41 @@ def read_inquiry(inquiry_id: str) -> dict:
         logger.warning("GET /inquiries/%s -> 404", inquiry_id)
         raise HTTPException(status_code=404, detail="inquiry not found")
     return inquiry
+
+
+@app.get("/inquiries/{inquiry_id}/logs")
+def get_inquiry_logs(inquiry_id: str) -> list[dict]:
+    """문의 한 건의 처리 로그를 실행 순서대로 반환한다."""
+    logger.info("GET /inquiries/%s/logs", inquiry_id)
+    if get_inquiry(inquiry_id) is None:
+        raise HTTPException(status_code=404, detail="inquiry not found")
+    return list_inquiry_logs(inquiry_id)
+
+
+@app.post("/inquiries/{inquiry_id}/logs/actions")
+def save_log_action(inquiry_id: str, payload: LogActionRequest) -> dict[str, str | bool]:
+    """수정 시작/취소처럼 DB 변경이 없는 상담원 UI 행동을 기록한다."""
+    actions = {
+        "edit_started": ("상담원 답변 수정 시작", "상담원이 AI 답변 수정 모드에 진입했습니다."),
+        "edit_cancelled": (
+            "상담원 답변 수정 취소",
+            "수정 내용을 취소하고 기존 AI 답변으로 돌아갔습니다.",
+        ),
+    }
+    if payload.event not in actions:
+        raise HTTPException(status_code=400, detail="unsupported log action")
+    if get_inquiry(inquiry_id) is None:
+        raise HTTPException(status_code=404, detail="inquiry not found")
+
+    title, message = actions[payload.event]
+    saved = append_inquiry_log(
+        inquiry_id,
+        stage="human",
+        event=payload.event,
+        title=title,
+        message=message,
+    )
+    return {"event": payload.event, "saved": saved}
 
 
 @app.patch("/inquiries/{inquiry_id}")

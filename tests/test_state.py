@@ -15,6 +15,7 @@ def test_create_initial_state_defaults():
     assert state["final_answer"] is None
     assert state["status"] == "문의 접수"
     assert state["reviewer_type"] is None
+    assert isinstance(state["pipeline_started_at"], float)
 
 
 def test_create_initial_state_with_optional_fields():
