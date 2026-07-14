@@ -6,6 +6,7 @@ documents 테이블에 임베딩 문서를 저장/조회.
 import json
 import logging
 import os
+import time
 import urllib.parse
 import urllib.request
 from typing import Any
@@ -157,6 +158,7 @@ def update_final_answer(
     human으로 판정하고 상태를 완료로 갱신한다.
     갱신된 행을 반환한다(없으면 None).
     """
+    started = time.perf_counter()
     inquiry = get_inquiry(inquiry_id)
     if inquiry is None:
         return None
@@ -177,6 +179,52 @@ def update_final_answer(
     )
     rows = read_json(request) or []
     logger.info("최종 답변 저장: inquiry_id=%s 성공=%s", inquiry_id, bool(rows))
+    if rows:
+        from app.clients.inquiry_logs import append_inquiry_log
+
+        if reviewer_type == "ai":
+            event = "answer_approved"
+            title = "AI 답변 승인"
+            message = "상담원이 AI 답변을 최종 답변으로 승인했습니다."
+        elif ai_answer:
+            event = "answer_modified"
+            title = "수정 답변 등록"
+            message = "상담원이 AI 답변을 수정해 최종 답변으로 등록했습니다."
+        else:
+            event = "answer_written"
+            title = "상담원 답변 등록"
+            message = "상담원이 답변을 직접 작성해 등록했습니다."
+
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        append_inquiry_log(
+            inquiry_id,
+            stage="human",
+            event=event,
+            title=title,
+            message=message,
+            duration_ms=duration_ms,
+            data={
+                "ai_answer": ai_answer or None,
+                "final_answer": saved_answer,
+                "same_as_ai_answer": reviewer_type == "ai",
+                "reviewer_type": reviewer_type,
+                "status": status,
+            },
+        )
+        append_inquiry_log(
+            inquiry_id,
+            stage="result",
+            event="completed",
+            title="문의 답변 처리 완료",
+            message="최종 답변 등록이 완료되었습니다.",
+            data={
+                "ai_answer": ai_answer or None,
+                "final_answer": saved_answer,
+                "same_as_ai_answer": reviewer_type == "ai",
+                "reviewer_type": reviewer_type,
+                "status": status,
+            },
+        )
     return rows[0] if rows else None
 
 

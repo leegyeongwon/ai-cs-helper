@@ -22,6 +22,34 @@ function getInquiries() {
   });
 }
 
+// 문의별 처리 로그 (sequence 오름차순)
+function getInquiryLogs(inquiryId) {
+  log("GET /inquiries/" + inquiryId + "/logs");
+  return fetch(API_BASE + "/inquiries/" + encodeURIComponent(inquiryId) + "/logs")
+    .then(function (res) {
+      if (!res.ok) throw new Error("GET /inquiries/{id}/logs " + res.status);
+      return res.json();
+    }).catch(function (err) {
+      logError("문의 처리 로그 조회 실패:", err.message);
+      throw err;
+    });
+}
+
+// 수정 시작/취소처럼 DB 변경이 없는 상담원 행동 기록
+function postLogAction(inquiryId, event) {
+  return fetch(API_BASE + "/inquiries/" + encodeURIComponent(inquiryId) + "/logs/actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: event }),
+  }).then(function (res) {
+    if (!res.ok) throw new Error("POST /inquiries/{id}/logs/actions " + res.status);
+    return res.json();
+  }).catch(function (err) {
+    logError("상담원 행동 로그 저장 실패:", err.message);
+    throw err;
+  });
+}
+
 // 최종 답변 저장 (관리자 승인/작성)
 function patchAnswer(inquiryId, finalAnswer) {
   log("PATCH /inquiries/" + inquiryId);
@@ -82,3 +110,5 @@ window.getInquiries = getInquiries;
 window.patchAnswer = patchAnswer;
 window.postInquiry = postInquiry;
 window.deleteInquiry = deleteInquiry;
+window.getInquiryLogs = getInquiryLogs;
+window.postLogAction = postLogAction;

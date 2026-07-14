@@ -361,6 +361,60 @@ textarea:focus { outline: 2px solid var(--accent); border-color: var(--accent); 
 .answer-actions { margin-top: 12px; display: flex; align-items: center; gap: 12px; }
 textarea[readonly] { background: var(--surface-1); cursor: default; }
 
+/* ===== AI 처리 타임라인 ===== */
+.timeline { position: relative; display: flex; flex-direction: column; gap: 0; }
+.timeline-empty {
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--page);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.error-text { color: #c93737; }
+.timeline-item { position: relative; display: grid; grid-template-columns: 18px 1fr; gap: 10px; }
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 15px;
+  bottom: -5px;
+  width: 2px;
+  background: var(--border);
+}
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  margin-top: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--surface-1);
+}
+.timeline-body { padding: 8px 0 14px; min-width: 0; }
+.timeline-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.timeline-head strong { font-size: 14px; }
+.timeline-head span { flex: 0 0 auto; color: var(--text-muted); font-size: 11px; }
+.timeline-body p { margin: 5px 0 0; color: var(--text-secondary); font-size: 13px; }
+.timeline-detail { margin-top: 7px; font-size: 12px; }
+.timeline-detail summary { color: var(--accent); cursor: pointer; }
+.timeline-detail pre {
+  max-height: 300px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 6px;
+  background: var(--page);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.timeline-item.success .timeline-dot { background: #1baf7a; }
+.timeline-item.warning .timeline-dot { background: #e39124; }
+.timeline-item.error .timeline-dot { background: #c93737; }
+.timeline-item.database .timeline-dot { background: #7d8793; }
+.timeline-item.human .timeline-dot { background: #7658c7; }
+
 /* ===== 통계 ===== */
 .kpi-row {
   display: grid;

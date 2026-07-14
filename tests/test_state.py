@@ -8,12 +8,14 @@ def test_create_initial_state_defaults():
     assert state["session_id"] == "sess-1"
     assert state["inquiry_id"] is None
     assert state["messages"] == []
+    assert state["masked_text"] is None
     assert state["intent"] is None
     assert state["retrieved_docs"] == []
     assert state["ai_answer"] is None
     assert state["final_answer"] is None
     assert state["status"] == "문의 접수"
     assert state["reviewer_type"] is None
+    assert isinstance(state["pipeline_started_at"], float)
 
 
 def test_create_initial_state_with_optional_fields():
