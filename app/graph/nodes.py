@@ -382,14 +382,9 @@ def router_node(state: InquiryState) -> dict:
 @log_node_errors("review")
 def review_node(state: InquiryState) -> dict:
     """ROUTER: 평가 및 재시도. ai_answer의 타당성을 검증한다."""
-<<<<<<< HEAD
-    query_text = _last_user_text(state)
-    docs_text = "\n".join(f"- {d['content']}" for d in state["retrieved_docs"])
-=======
     query_text = _query_text(state)
     docs_text = "\n".join(f"- {d['content']}" for d in state["retrieved_docs"])
 
->>>>>>> a8e3844f3953f65892fc64cdd8d59a8feeb66b66
     prompt = f"""당신은 AI가 생성한 고객 문의 답변이 타당한지 검토하는 검수자입니다.
 
 [문의 내용]
