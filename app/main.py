@@ -8,8 +8,15 @@ from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
 from app.clients.inquiry_logs import append_inquiry_log, list_inquiry_logs
-from app.clients.supabase import delete_inquiry, get_inquiry, list_inquiries, update_final_answer
+from app.clients.supabase import (
+    delete_inquiry,
+    get_inquiry,
+    list_inquiries,
+    mark_inquiry_failed,
+    update_final_answer,
+)
 from app.graph.graph import graph
+from app.graph.nodes import start_inquiry
 from app.graph.state import create_initial_state
 from app.logging_config import setup_logging
 
@@ -132,12 +139,36 @@ def create_inquiry(payload: InquiryRequest) -> dict[str, str]:
         messages=[HumanMessage(content=payload.text)],
     )
 
-    logger.info("그래프 실행 시작")
+    # 1) 먼저 INSERT해서 inquiry_id를 확보한다. 여기서 실패하면 저장된 게 없으므로
+    #    예외를 그대로 올려 500으로 응답한다(진짜 실패).
+    inquiry_id = start_inquiry(initial_state)
+    initial_state["inquiry_id"] = inquiry_id
+
+    # 2) 파이프라인 실행. 중간에 회복 불가능한 오류가 나면 이미 접수된 문의를
+    #    '상담원 확인 필요'로 마킹하고 부분 성공으로 응답한다(500 대신).
+    logger.info("그래프 실행 시작 inquiry_id=%s", inquiry_id)
     try:
         result = graph.invoke(initial_state)
-    except Exception:
-        logger.exception("그래프 실행 중 예외 발생")
-        raise
+    except Exception as exc:
+        logger.exception("그래프 실행 중 예외 발생 -> 상담원 확인 필요로 이관: inquiry_id=%s", inquiry_id)
+        append_inquiry_log(
+            inquiry_id,
+            stage="pipeline",
+            event="failed",
+            title="문의 처리 실패",
+            message=str(exc),
+            data={"error_type": type(exc).__name__, "error": str(exc)},
+        )
+        try:
+            mark_inquiry_failed(inquiry_id)
+        except Exception:
+            logger.exception("실패 상태 마킹 실패: inquiry_id=%s", inquiry_id)
+        return {
+            "inquiry_id": inquiry_id,
+            "session_id": initial_state["session_id"],
+            "status": "상담원 확인 필요",
+        }
+
     logger.info(
         "그래프 실행 종료: inquiry_id=%s intent=%s ai_answer=%s status=%s",
         result.get("inquiry_id"),
@@ -145,5 +176,4 @@ def create_inquiry(payload: InquiryRequest) -> dict[str, str]:
         "있음" if result.get("ai_answer") else "없음",
         result.get("status"),
     )
-
-    return {"inquiry_id": result["inquiry_id"], "session_id": result["session_id"]}
+    return {"inquiry_id": inquiry_id, "session_id": result["session_id"]}

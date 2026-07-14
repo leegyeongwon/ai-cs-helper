@@ -60,7 +60,7 @@ def test_env_raises_when_value_missing(monkeypatch):
 def test_post_json_sends_json_payload(monkeypatch):
     captured = {}
 
-    def fake_read_json(request):
+    def fake_read_json(request, timeout=None):
         captured["method"] = request.get_method()
         captured["headers"] = dict(request.header_items())
         captured["body"] = json.loads(request.data.decode("utf-8"))
@@ -94,6 +94,29 @@ def test_embed_returns_embedding_from_api_response(monkeypatch):
     monkeypatch.setattr(embedding, "post_json", fake_post_json)
 
     assert embedding.embed("hello", "query") == [0.1, 0.2, 0.3]
+
+
+def test_embed_with_usage_returns_model_and_tokens(monkeypatch):
+    monkeypatch.setattr(
+        embedding,
+        "embedding_config",
+        lambda kind: ("https://api.example.com/v1", "test-key", "embedding-query"),
+    )
+    monkeypatch.setattr(
+        embedding,
+        "post_json",
+        lambda *args, **kwargs: {
+            "model": "embedding-query-v1",
+            "data": [{"embedding": [0.1, 0.2]}],
+            "usage": {"prompt_tokens": 8, "total_tokens": 8},
+        },
+    )
+
+    result = embedding.embed_with_usage("hello", "query")
+
+    assert result.vector == [0.1, 0.2]
+    assert result.model == "embedding-query-v1"
+    assert result.token_usage == {"prompt_tokens": 8, "total_tokens": 8}
 
 
 @pytest.mark.parametrize(

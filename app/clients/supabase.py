@@ -97,7 +97,8 @@ def insert_inquiry(state: dict) -> str:
         headers=supabase_headers({"Prefer": "return=representation"}),
         method="POST",
     )
-    result = read_json(request)
+    # INSERT는 멱등하지 않으므로 재시도를 끈다(응답 유실 시 중복 문의 방지).
+    result = read_json(request, retries=1)
     new_id = result[0]["inquiry_id"]
     logger.info("inquiries INSERT: inquiry_id=%s", new_id)
     return new_id
@@ -116,6 +117,23 @@ def update_inquiry(state: dict) -> None:
     )
     read_json(request)
     logger.info("inquiries UPDATE: inquiry_id=%s", state["inquiry_id"])
+
+
+def mark_inquiry_failed(inquiry_id: str, status: str = "상담원 확인 필요") -> None:
+    """파이프라인 중 오류로 중단된 문의를 상담원 확인 필요 상태로 마킹한다(보상 트랜잭션).
+
+    INSERT는 됐지만 이후 노드가 실패해 '문의 접수'에서 멈춘 좀비 행을 방지한다.
+    PATCH는 멱등하므로 재시도해도 안전하다.
+    """
+    values = {"status": status, "reviewer_type": "human"}
+    request = urllib.request.Request(
+        supabase_url(inquiries_table(), {"inquiry_id": f"eq.{inquiry_id}"}),
+        data=json.dumps(values, ensure_ascii=False).encode("utf-8"),
+        headers=supabase_headers({"Prefer": "return=minimal"}),
+        method="PATCH",
+    )
+    read_json(request)
+    logger.info("문의 실패 마킹: inquiry_id=%s status=%s", inquiry_id, status)
 
 
 # ---------------------------------------------------------------------------

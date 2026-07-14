@@ -75,8 +75,3 @@ def mask_personal_info_with_details(text: str) -> MaskingResult:
         summary or "없음",
     )
     return {"masked_text": masked, "counts": filtered_counts}
-
-
-def mask_personal_info(text: str) -> str:
-    """알려진 개인정보 형식을 의미가 드러나는 마스킹 토큰으로 치환한다."""
-    return mask_personal_info_with_details(text)["masked_text"]

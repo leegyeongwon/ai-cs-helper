@@ -19,16 +19,27 @@ def test_review_node_receives_retrieved_regulations(monkeypatch):
         }
     )
 
-    def fake_ask(prompt):
+    def fake_ask_with_usage(prompt):
         captured["prompt"] = prompt
-        return '{"answer_review":"pass","review_feedback":null}'
+        return nodes.llm.LLMResult(
+            content='{"answer_review":"pass","review_feedback":null}',
+            model="test-model",
+            token_usage={"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120},
+        )
 
-    monkeypatch.setattr(nodes.llm, "ask", fake_ask)
-    monkeypatch.setattr(nodes, "append_inquiry_log", lambda *args, **kwargs: True)
+    logs = []
+    monkeypatch.setattr(nodes.llm, "ask_with_usage", fake_ask_with_usage)
+    monkeypatch.setattr(
+        nodes,
+        "append_inquiry_log",
+        lambda *args, **kwargs: logs.append(kwargs) or True,
+    )
 
     result = nodes.review_node(state)
 
     assert result["answer_review"] == "pass"
-    assert "[관련 규정]" in captured["prompt"]
+    assert "<retrieved_documents>" in captured["prompt"]
     assert "제10조 환불 규정" in captured["prompt"]
     assert "제11조 수수료 규정" in captured["prompt"]
+    assert logs[0]["data"]["model"] == "test-model"
+    assert logs[0]["data"]["token_usage"]["total_tokens"] == 120

@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage
 
 from app.graph.nodes import mask_personal_info_node
 from app.graph.state import create_initial_state
-from app.privacy.masking import mask_personal_info
+from app.privacy.masking import mask_personal_info_with_details
 
 
 @pytest.mark.parametrize(
@@ -23,7 +23,7 @@ from app.privacy.masking import mask_personal_info
     ],
 )
 def test_mask_personal_info(personal_info, mask):
-    masked = mask_personal_info(f"문의입니다. {personal_info}")
+    masked = mask_personal_info_with_details(f"문의입니다. {personal_info}")["masked_text"]
 
     assert personal_info not in masked
     assert mask in masked
@@ -43,7 +43,7 @@ def test_masking_log_contains_counts_but_not_personal_info(caplog):
     personal_info = "010-1234-5678 hong@example.com"
 
     with caplog.at_level(logging.INFO, logger="app.privacy.masking"):
-        mask_personal_info(personal_info)
+        mask_personal_info_with_details(personal_info)
 
     assert "총=2건" in caplog.text
     assert "전화번호=1건" in caplog.text

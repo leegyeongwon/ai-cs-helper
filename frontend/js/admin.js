@@ -227,6 +227,10 @@
     var parts = [];
     if (entry.attempt != null) parts.push(entry.attempt + "차");
     if (entry.duration_ms != null) parts.push(entry.duration_ms + "ms");
+    var tokenUsage = entry.data && entry.data.token_usage;
+    if (tokenUsage && tokenUsage.total_tokens != null) {
+      parts.push("총 " + tokenUsage.total_tokens.toLocaleString("ko-KR") + "토큰");
+    }
     parts.push(fmtDate(entry.created_at));
     return parts.filter(Boolean).join(" · ");
   }

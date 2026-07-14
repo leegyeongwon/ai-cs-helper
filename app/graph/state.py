@@ -35,7 +35,10 @@ class InquiryState(TypedDict):
     final_answer: str | None
 
     # 처리 상태
-    status: Literal["문의 접수", "답변 생성", "답변 완료"]
+    status: Literal["문의 접수", "답변 생성", "답변 완료", "상담원 확인 필요"]
+
+    # RAG 검색이 오류로 실패했는지 여부. True면 router가 LLM 호출 없이 상담원 이관.
+    rag_failed: bool
 
     # 처리자 (AI 또는 사람)
     reviewer_type: str | None
@@ -70,6 +73,7 @@ def create_initial_state(
         messages=messages or [],
         masked_text=None,
         intent=None,
+        rag_failed=False,
         retrieved_docs=[],
         categories=None,
         ai_answer=None,

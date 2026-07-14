@@ -8,7 +8,7 @@ import logging
 import math
 from typing import Any
 
-from app.clients.embedding import embed
+from app.clients.embedding import EmbeddingResult, embed_with_usage
 from app.clients.supabase import fetch_documents, parse_embedding
 
 logger = logging.getLogger(__name__)
@@ -24,16 +24,14 @@ def cosine_similarity(a: list[float], b: list[float]) -> float:
     return dot / (norm_a * norm_b)
 
 
-def search(query_text: str, top_k: int = 5) -> list[tuple[float, dict[str, Any]]]:
-    """
-    질의와 유사한 문서를 (score, doc) 리스트로 반환.
-
-    점수 내림차순 정렬. 저장된 문서가 없으면 빈 리스트.
-    """
-    query_embedding = embed(query_text, "query")
+def search_with_usage(
+    query_text: str, top_k: int = 5
+) -> tuple[list[tuple[float, dict[str, Any]]], EmbeddingResult]:
+    """상위 문서와 질의 임베딩의 토큰 사용량을 함께 반환한다."""
+    embedding_result = embed_with_usage(query_text, "query")
     docs = fetch_documents()
     scored = [
-        (cosine_similarity(query_embedding, parse_embedding(doc["embedding"])), doc)
+        (cosine_similarity(embedding_result.vector, parse_embedding(doc["embedding"])), doc)
         for doc in docs
         if doc.get("embedding") is not None
     ]
@@ -46,4 +44,4 @@ def search(query_text: str, top_k: int = 5) -> list[tuple[float, dict[str, Any]]
         len(top),
         top[0][0] if top else 0.0,
     )
-    return top
+    return top, embedding_result
