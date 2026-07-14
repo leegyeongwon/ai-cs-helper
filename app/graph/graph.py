@@ -18,15 +18,15 @@ logger = logging.getLogger(__name__)
 def build_graph():
     workflow = StateGraph(InquiryState)
 
-    workflow.add_node("initial_save", save_to_db_node)
+    # 최초 INSERT는 그래프 실행 전 main.py의 start_inquiry에서 수행한다.
+    # 그래프는 마스킹부터 시작해 마지막에 결과를 UPDATE(final_save)한다.
     workflow.add_node("mask_personal_info", mask_personal_info_node)
     workflow.add_node("rag_search", rag_search_node)
     workflow.add_node("router", router_node)
     workflow.add_node("review", review_node)
     workflow.add_node("final_save", save_to_db_node)
 
-    workflow.add_edge(START, "initial_save")
-    workflow.add_edge("initial_save", "mask_personal_info")
+    workflow.add_edge(START, "mask_personal_info")
     workflow.add_edge("mask_personal_info", "rag_search")
     workflow.add_edge("rag_search", "router")
 

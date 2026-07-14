@@ -60,7 +60,7 @@ def test_env_raises_when_value_missing(monkeypatch):
 def test_post_json_sends_json_payload(monkeypatch):
     captured = {}
 
-    def fake_read_json(request):
+    def fake_read_json(request, timeout=None):
         captured["method"] = request.get_method()
         captured["headers"] = dict(request.header_items())
         captured["body"] = json.loads(request.data.decode("utf-8"))
@@ -96,6 +96,29 @@ def test_embed_returns_embedding_from_api_response(monkeypatch):
     assert embedding.embed("hello", "query") == [0.1, 0.2, 0.3]
 
 
+def test_embed_with_usage_returns_model_and_tokens(monkeypatch):
+    monkeypatch.setattr(
+        embedding,
+        "embedding_config",
+        lambda kind: ("https://api.example.com/v1", "test-key", "embedding-query"),
+    )
+    monkeypatch.setattr(
+        embedding,
+        "post_json",
+        lambda *args, **kwargs: {
+            "model": "embedding-query-v1",
+            "data": [{"embedding": [0.1, 0.2]}],
+            "usage": {"prompt_tokens": 8, "total_tokens": 8},
+        },
+    )
+
+    result = embedding.embed_with_usage("hello", "query")
+
+    assert result.vector == [0.1, 0.2]
+    assert result.model == "embedding-query-v1"
+    assert result.token_usage == {"prompt_tokens": 8, "total_tokens": 8}
+
+
 @pytest.mark.parametrize(
     ("ai_answer", "final_answer", "expected_reviewer"),
     [
@@ -122,6 +145,9 @@ def test_update_final_answer_assigns_reviewer(
         return [{"inquiry_id": "inq-1", **captured}]
 
     monkeypatch.setattr(supabase, "read_json", fake_read_json)
+    # update_final_answer는 내부에서 inquiry_logs.append_inquiry_log를 호출한다.
+    # 목킹하지 않으면 실제 Supabase로 POST가 나가므로(모듈이 자기 read_json을 씀) 차단한다.
+    monkeypatch.setattr("app.clients.inquiry_logs.append_inquiry_log", lambda *a, **k: True)
 
     updated = supabase.update_final_answer("inq-1", final_answer)
 

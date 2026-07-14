@@ -1,7 +1,6 @@
 /*
  * 백엔드 API 호출 래퍼.
- * 데모 기준 백엔드는 http://localhost:8000 에서 동작한다.
- * GCP 서버 ip를 넣은 상태로 업데이트
+ * 배포된 GCP 백엔드 API를 사용한다.
  * (배포 위치가 바뀌면 API_BASE만 수정하면 된다.)
  */
 
@@ -24,11 +23,17 @@ function getInquiries() {
 
 // 문의별 처리 로그 (sequence 오름차순)
 function getInquiryLogs(inquiryId) {
-  log("GET /inquiries/" + inquiryId + "/logs");
-  return fetch(API_BASE + "/inquiries/" + encodeURIComponent(inquiryId) + "/logs")
+  var path = "/inquiries/" + encodeURIComponent(inquiryId) + "/logs";
+  log("GET " + path);
+  return fetch(API_BASE + path)
     .then(function (res) {
-      if (!res.ok) throw new Error("GET /inquiries/{id}/logs " + res.status);
-      return res.json();
+      return res.json().catch(function () { return null; }).then(function (body) {
+        if (!res.ok) {
+          var detail = body && body.detail ? " · " + body.detail : "";
+          throw new Error("GET " + path + " " + res.status + detail);
+        }
+        return body;
+      });
     }).catch(function (err) {
       logError("문의 처리 로그 조회 실패:", err.message);
       throw err;
