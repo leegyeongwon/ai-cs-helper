@@ -150,7 +150,9 @@ def create_inquiry(payload: InquiryRequest) -> dict[str, str]:
     try:
         result = graph.invoke(initial_state)
     except Exception as exc:
-        logger.exception("그래프 실행 중 예외 발생 -> 상담원 확인 필요로 이관: inquiry_id=%s", inquiry_id)
+        logger.exception(
+            "그래프 실행 중 예외 발생 -> 상담원 확인 필요로 이관: inquiry_id=%s", inquiry_id
+        )
         append_inquiry_log(
             inquiry_id,
             stage="pipeline",

@@ -33,8 +33,8 @@ def test_format_retrieved_docs_includes_rank_id_and_score():
 def test_router_prompt_uses_ai_first_policy():
     prompt = build_router_prompt("항공권을 환불하고 싶어요", sample_documents())
 
-    assert "기본적으로 AI가 답변 초안을 생성" in prompt
-    assert "근거가 하나라도" in prompt
+    assert "기본적으로 AI가 답변을 생성" in prompt
+    assert "근거가 있으면" in prompt
     assert "모든 검색 문서가 문의와 무관" in prompt
     assert "used_regulation_ids" in prompt
     assert all(category in prompt for category in CATEGORIES)
