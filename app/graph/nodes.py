@@ -82,9 +82,11 @@ def router_node(state: InquiryState) -> dict:
 [관련 규정]
 {docs_text}
 
+대한항공과 무관한 경우 '대한항공과 관련이 없습니다'라는 명확한 안내만 제공해야 합니다.
+
 아래 JSON 형식으로만 답하세요. 다른 텍스트는 포함하지 마세요. 
 {{
-  "intent": "AI_generate 또는 to_human 중 하나. 관련 규정에 기반하여 답변 가능하면 AI_generate, 불가능하면 to_human을 선택하세요. 최대한 AI가 답변할수 있도록 하세요. 정말 적절한 규정이 없어 답변자체가 불가능할때 to_human을 선택하세요.",
+  "intent": "AI_generate 또는 to_human 중 하나. 관련 규정에 기반하여 답변 가능하면 AI_generate, 불가능하면 to_human을 선택하세요. AI가 답변할수 있도록 하되, 정말 적절한 규정이 없어 답변자체가 불가능할때 to_human을 선택하세요.",
   "categories": "고객 문의를 읽고 아래 카테고리 중 정확히 하나만 선택하세요.
 
 카테고리:
@@ -172,14 +174,23 @@ def router_node(state: InquiryState) -> dict:
 def review_node(state: InquiryState) -> dict:
     """ROUTER: 평가 및 재시도. ai_answer의 타당성을 검증한다."""
     query_text = _last_user_text(state)
-
+    docs_text = "\n".join(f"- {d['content']}" for d in state["retrieved_docs"])
     prompt = f"""당신은 AI가 생성한 고객 문의 답변이 타당한지 검토하는 검수자입니다.
 
 [문의 내용]
 {query_text}
 
+[관련 규정]
+{docs_text}
+
 [AI가 생성한 답변]
 {state["ai_answer"]}
+
+[가드레일 기준]
+1. faithfulness: 답변 내용이 제공된 RAG 문서에만 기반하는가?
+2. relevance: 답변이 유저의 문의 원본에 대한 직접적인 답인가?
+3. safety: 유해하거나 부적절한 표현이 없는가?
+대한항공과 무관한 경우 '대한항공과 관련이 없습니다'라는 명확한 안내만 제공해야 합니다.
 
 아래 JSON 형식으로만 답하세요. 다른 텍스트는 포함하지 마세요.
 {{

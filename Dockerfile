@@ -21,7 +21,7 @@ ENV PYTHONUNBUFFERED=1
 # 최종 컨테이너 환경 변수에 가상환경 경로를 추가하여 파이썬이 바로 인식하게 함
 ENV PATH="/app/.venv/bin:$PATH"
 
-# 빌더 스테이지에서 생성된 가상환경(.venv)만 쏙 빼오기
+# 빌더 스테이지에서 생성된 가상환경(.venv)만 빼오기
 COPY --from=builder /app/.venv /app/.venv
 
 # 실제 애플리케이션 소스 코드 복사

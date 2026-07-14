@@ -25,3 +25,10 @@ services:
       - "4000"
     ports:
       - "4000:4000"
+
+  frontend:
+    image: nginx:alpine
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"

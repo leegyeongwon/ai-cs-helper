@@ -1,10 +1,11 @@
 /*
  * 백엔드 API 호출 래퍼.
  * 데모 기준 백엔드는 http://localhost:8000 에서 동작한다.
+ * GCP 서버 ip를 넣은 상태로 업데이트
  * (배포 위치가 바뀌면 API_BASE만 수정하면 된다.)
  */
 
-var API_BASE = "http://localhost:8000";
+var API_BASE = "http://34.50.51.111:8000";
 
 // 전체 문의 목록 (최신순)
 function getInquiries() {

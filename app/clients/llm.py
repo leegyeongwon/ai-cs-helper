@@ -11,20 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 def litellm_base_url() -> str:
-    """LiteLLM 엔드포인트 base URL을 결정한다.
-
-    로컬 콘솔에서는 Docker Compose 내부 주소(http://litellm:4000)가 잡히지
-    않으므로, 로컬 override → 일반 base URL → 기본값 순으로 선택한다.
-    """
-    local_url = os.getenv("LITELLM_LOCAL_BASE_URL", "").strip()
-    if local_url:
-        return local_url.rstrip("/")
-
-    base_url = os.getenv("LITELLM_BASE_URL", "").strip()
-    if base_url and "://litellm:" not in base_url:
-        return base_url.rstrip("/")
-
-    return "http://localhost:4000/v1"
+    """LiteLLM 엔드포인트 base URL을 결정한다."""
+    base_url = os.getenv("LITELLM_BASE_URL", "http://localhost:4000/v1").strip()
+    return base_url.rstrip("/")
 
 
 def chat(messages: list[dict[str, str]], model: str | None = None) -> str:
