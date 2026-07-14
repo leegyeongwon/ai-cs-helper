@@ -38,6 +38,7 @@ on:
     # paths: 아래 파일이 변경됐을 때만 실행 (문서만 고쳤을 땐 CI를 돌리지 않아 시간 절약)
     paths:
       - 'app/**'
+      - 'tests/**'
       - 'main.py'
       - 'test_*.py'
       - '*_test.py'
@@ -51,6 +52,7 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      - 'tests/**'
       - 'main.py'
       - 'test_*.py'
       - '*_test.py'
