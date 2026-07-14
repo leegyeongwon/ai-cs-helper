@@ -26,6 +26,7 @@ COPY --from=builder /app/.venv /app/.venv
 
 # 실제 애플리케이션 소스 코드 복사
 COPY app ./app
+COPY scripts ./scripts
 
 EXPOSE 8000
 
