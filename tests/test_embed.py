@@ -145,6 +145,9 @@ def test_update_final_answer_assigns_reviewer(
         return [{"inquiry_id": "inq-1", **captured}]
 
     monkeypatch.setattr(supabase, "read_json", fake_read_json)
+    # update_final_answer는 내부에서 inquiry_logs.append_inquiry_log를 호출한다.
+    # 목킹하지 않으면 실제 Supabase로 POST가 나가므로(모듈이 자기 read_json을 씀) 차단한다.
+    monkeypatch.setattr("app.clients.inquiry_logs.append_inquiry_log", lambda *a, **k: True)
 
     updated = supabase.update_final_answer("inq-1", final_answer)
 
