@@ -1,14 +1,14 @@
 from app.clients import llm
 
 
-#def test_litellm_base_url_prefers_local_override(monkeypatch):
- #   monkeypatch.setenv("LITELLM_LOCAL_BASE_URL", "http://localhost:9000/v1")
- #   monkeypatch.setenv("LITELLM_BASE_URL", "http://litellm:4000/v1")
+# def test_litellm_base_url_prefers_local_override(monkeypatch):
+#   monkeypatch.setenv("LITELLM_LOCAL_BASE_URL", "http://localhost:9000/v1")
+#   monkeypatch.setenv("LITELLM_BASE_URL", "http://litellm:4000/v1")
 
- #   assert llm.litellm_base_url() == "http://localhost:9000/v1"
+#   assert llm.litellm_base_url() == "http://localhost:9000/v1"
 
 
-#def test_litellm_base_url_ignores_docker_internal_host(monkeypatch):
+# def test_litellm_base_url_ignores_docker_internal_host(monkeypatch):
 #    monkeypatch.delenv("LITELLM_LOCAL_BASE_URL", raising=False)
 #    monkeypatch.setenv("LITELLM_BASE_URL", "http://litellm:4000/v1")
 
