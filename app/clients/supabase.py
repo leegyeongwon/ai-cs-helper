@@ -120,11 +120,7 @@ def update_inquiry(state: dict) -> None:
 
 
 def mark_inquiry_failed(inquiry_id: str, status: str = "상담원 확인 필요") -> None:
-    """파이프라인 중 오류로 중단된 문의를 상담원 확인 필요 상태로 마킹한다(보상 트랜잭션).
-
-    INSERT는 됐지만 이후 노드가 실패해 '문의 접수'에서 멈춘 좀비 행을 방지한다.
-    PATCH는 멱등하므로 재시도해도 안전하다.
-    """
+    """파이프라인 중 오류로 중단된 문의를 상담원 확인 필요 상태로 마킹한다"""
     values = {"status": status, "reviewer_type": "human"}
     request = urllib.request.Request(
         supabase_url(inquiries_table(), {"inquiry_id": f"eq.{inquiry_id}"}),

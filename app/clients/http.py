@@ -70,11 +70,7 @@ def read_json(
     timeout: float | None = None,
     retries: int = MAX_RETRIES,
 ) -> Any:
-    """요청을 보내고 JSON 응답을 파싱한다. 일시적 실패는 지수 백오프로 재시도한다.
-
-    주의: POST INSERT처럼 멱등하지 않은 요청은 첫 응답을 받기 전에 끊기면
-    재시도로 중복 생성될 여지가 있다. 필요한 호출은 retries=1로 끌 수 있다.
-    """
+    """요청을 보내고 JSON 응답을 파싱한다. 일시적 실패는 지수 백오프로 재시도한다."""
     method = request.get_method()
     url = request.full_url
     effective_timeout = DEFAULT_TIMEOUT if timeout is None else timeout
