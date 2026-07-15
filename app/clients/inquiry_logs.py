@@ -28,7 +28,7 @@ def append_inquiry_log(
     duration_ms: int | None = None,
     data: dict[str, Any] | None = None,
 ) -> bool:
-    """처리 로그를 저장한다. 실패해도 본 파이프라인은 중단하지 않는다."""
+    """처리 로그를 저장한다. 실패해도 파이프라인은 중단하지 않는다."""
     if not inquiry_id:
         return False
 

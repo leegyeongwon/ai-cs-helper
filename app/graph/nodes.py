@@ -2,13 +2,7 @@
 LangGraph 노드 함수 모음.
 
 마스킹 -> RAG검색 -> 라우터 -> 리뷰 -> DB저장 순서로 돌아감.
-(최초 INSERT는 그래프 실행 전에 main.py가 start_inquiry로 먼저 수행해 inquiry_id를 확보한다.)
 각 노드는 state를 받아서 '바뀐 부분만' dict로 return -> LangGraph가 알아서 합쳐줌.
-
-[오류 처리 원칙]
-- RAG/router/review는 외부 호출(LLM/임베딩) 실패 시 예외를 올리지 않고 '상담원 이관'으로
-  우아하게 폴백한다(파이프라인 중단 방지).
-- 그 외 노드(masking/save_to_db)의 예외는 그대로 올려 main.py가 한 곳에서 처리한다.
 """
 
 import json
@@ -94,7 +88,7 @@ def _normalize_router_result(parsed: dict, valid_regulation_ids: set[int] | None
     if intent not in {"AI_generate", "to_human"}:
         raise ValueError(f"invalid intent: {intent!r}")
 
-    # 카테고리가 우리가 정해둔 목록에 없으면 그냥 "기타"로 처리
+    # 카테고리가 우리가 정해둔 목록에 없으면 그냥 기타로 처리
     category = parsed.get("categories")
     if category not in CATEGORIES:
         logger.warning("허용되지 않은 카테고리 %r -> 기타", category)

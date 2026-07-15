@@ -29,11 +29,7 @@ def litellm_base_url() -> str:
 
 
 def _extract_content(response: Any) -> str:
-    """LiteLLM 응답에서 assistant content만 안전하게 꺼낸다.
-
-    HTTP 200에 에러 바디를 주거나(예: rate limit) 형태가 다를 때
-    KeyError/IndexError 대신 원인이 드러나는 RuntimeError를 낸다.
-    """
+    """LiteLLM 응답에서 assistant content만 안전하게 꺼낸다."""
     if isinstance(response, dict) and response.get("error"):
         raise RuntimeError(f"LLM error response: {response['error']}")
     try:
