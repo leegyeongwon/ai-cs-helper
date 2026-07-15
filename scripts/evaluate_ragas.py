@@ -273,10 +273,10 @@ def build_ragas_embeddings() -> LangchainEmbeddingsWrapper:
 
 def run_evaluation(dataset: EvaluationDataset):
     metrics = [
-        faithfulness,        # 답변이 검색된 문서에 근거하는지 (환각 여부)
-        answer_relevancy,    # 답변이 질문과 얼마나 관련 있는지
-        context_precision,   # 검색된 문서 중 실제 정답 생성에 유용했던 비율
-        context_recall,      # 정답 생성에 필요한 정보를 검색이 충분히 커버했는지
+        faithfulness,  # 답변이 검색된 문서에 근거하는지 (환각 여부)
+        answer_relevancy,  # 답변이 질문과 얼마나 관련 있는지
+        context_precision,  # 검색된 문서 중 실제 정답 생성에 유용했던 비율
+        context_recall,  # 정답 생성에 필요한 정보를 검색이 충분히 커버했는지
         answer_correctness,  # ai_answer가 final_answer와 얼마나 일치하는지 (핵심 지표)
     ]
     return evaluate(
